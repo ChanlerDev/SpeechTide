@@ -1,0 +1,106 @@
+// @see - https://www.electron.build/configuration/configuration
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "app.speechtide",
+  "productName": "SpeechTide",
+  "copyright": "Copyright © 2025 SpeechTide Team",
+  "asar": true,
+  
+  "directories": {
+    "output": "release/${version}",
+    "buildResources": "build"
+  },
+  
+  "files": [
+    "dist/**/*",
+    "dist-electron/**/*",
+    "electron/transcriber/*.cjs",
+    "!**/*.map",
+    "!**/node_modules/.cache/**"
+  ],
+  
+  // preload 脚本必须解包到 asar 外部才能被 Electron 加载
+  "asarUnpack": [
+    "dist-electron/preload.cjs"
+  ],
+  
+  // macOS 原生库和模块
+  "extraResources": [
+    {
+      "from": "node_modules/sherpa-onnx-darwin-arm64",
+      "to": "native/sherpa-onnx-darwin-arm64",
+      "filter": ["**/*.dylib", "**/*.node", "!**/*.map"]
+    },
+    {
+      "from": "node_modules/sherpa-onnx-darwin-x64",
+      "to": "native/sherpa-onnx-darwin-x64",
+      "filter": ["**/*.dylib", "**/*.node", "!**/*.map"]
+    },
+    {
+      "from": "native/ax-insert/build/Release",
+      "to": "native",
+      "filter": ["*.node"]
+    }
+  ],
+  
+  "mac": {
+    "target": [
+      { "target": "dmg", "arch": ["arm64"] }
+    ],
+    "category": "public.app-category.productivity",
+    "icon": "build/icon.icns",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "build/entitlements.mac.plist",
+    "entitlementsInherit": "build/entitlements.mac.plist",
+    "extendInfo": {
+      "NSMicrophoneUsageDescription": "SpeechTide 需要访问麦克风进行语音录制",
+      "NSAppleEventsUsageDescription": "SpeechTide 需要控制其他应用以插入转写文本"
+    }
+  },
+  
+  "dmg": {
+    "contents": [
+      { "x": 130, "y": 220 },
+      { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+    ],
+    "window": {
+      "width": 540,
+      "height": 380
+    }
+  },
+  
+  "win": {
+    "target": [
+      { "target": "nsis", "arch": ["x64"] },
+      { "target": "portable", "arch": ["x64"] }
+    ],
+    "icon": "build/icon.ico",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
+  },
+  
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "deleteAppDataOnUninstall": false,
+    "installerIcon": "build/icon.ico",
+    "uninstallerIcon": "build/icon.ico",
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true
+  },
+  
+  "linux": {
+    "target": ["AppImage"],
+    "category": "Utility",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
+  },
+  
+  "publish": {
+    "provider": "github",
+    "owner": "ChanlerDev",
+    "repo": "speechtide",
+    "releaseType": "release"
+  }
+}

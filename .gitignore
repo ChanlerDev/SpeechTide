@@ -1,0 +1,62 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+dist
+dist-ssr
+dist-electron
+dist-electron/assets
+release
+*.local
+
+# Testing
+coverage
+
+# Cache
+.eslintcache
+.cache
+*.tsbuildinfo
+
+# Native builds
+native/**/build/
+native/**/*.node
+native/*.node
+
+# Runtime directories
+config
+conversations
+models
+
+# .conductor directory (internal tool)
+.conductor/
+
+# AI assistant files
+CLAUDE.md
+AGENTS.md
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Temporary files
+*.tmp
+*.temp
+Thumbs.db

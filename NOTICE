@@ -1,0 +1,59 @@
+SpeechTide
+Copyright 2025 SpeechTide Contributors
+
+This product includes software developed at SpeechTide (https://github.com/ChanlerDev/speechtide).
+
+================================================================================
+This software contains code derived from various open source projects.
+================================================================================
+
+Apache License 2.0
+-------------------
+
+@xenova/transformers
+Copyright 2023 Xenova
+Licensed under the Apache License, Version 2.0
+
+sherpa-onnx-node
+Copyright 2024 k2-fsa
+Licensed under the Apache License, Version 2.0
+
+React
+Copyright (c) Facebook, Inc. and its affiliates.
+Licensed under the MIT License
+
+Electron
+Copyright (c) 2022 GitHub Inc.
+Licensed under the MIT License
+
+TypeScript
+Copyright (c) Microsoft Corporation.
+Licensed under the Apache License, Version 2.0
+
+Vite
+Copyright (c) 2019-present, Yuxi (Evan) You.
+Licensed under the MIT License
+
+RobotJS
+Copyright (c) 2014 RReverser
+Licensed under the MIT License
+
+node-record-lpcm16
+Copyright (c) 2017 Anton Mironov
+Licensed under the MIT License
+
+================================================================================
+AI Models
+================================================================================
+
+SenseVoice Model
+Source: https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17
+License: Apache 2.0 (assumed)
+Developed by FunAudioLLM community
+
+Whisper Model (Xenova/whisper-small.en)
+Source: https://huggingface.co/Xenova/whisper-small.en
+License: MIT
+Based on OpenAI's Whisper model
+
+For the full text of the Apache License, Version 2.0, see the LICENSE file.

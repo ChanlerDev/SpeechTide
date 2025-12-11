@@ -1,0 +1,41 @@
+{
+  "name": "ax-insert",
+  "version": "1.0.0",
+  "description": "Keyboard simulation based text insertion module for macOS",
+  "main": "index.js",
+  "gypfile": true,
+  "author": "SpeechTide",
+  "license": "MIT",
+  "keywords": [
+    "macos",
+    "accessibility",
+    "keyboard-simulation",
+    "text-insertion",
+    "automation"
+  ],
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "scripts": {
+    "install": "node-gyp rebuild",
+    "rebuild": "node-gyp rebuild",
+    "clean": "node-gyp clean"
+  },
+  "dependencies": {
+    "node-addon-api": "^7.0.0"
+  },
+  "devDependencies": {
+    "node-gyp": "^10.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/speechtide/ax-insert"
+  }
+}

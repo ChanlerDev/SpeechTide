@@ -1,0 +1,131 @@
+# SpeechTide
+
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Version](https://img.shields.io/badge/version-1.0.0-green.svg)]()
+
+中文 | [English](README_EN.md)
+
+SpeechTide 是一个以 macOS 为优先的跨平台语音输入助手，基于 Electron + React + TypeScript 构建。使用本地 SenseVoice 模型实现"托盘/快捷键/录音/转写/文本注入"的完整工作流。
+
+## ✨ 功能特性
+
+- 🎙️ **语音录制**：使用 Electron 原生 API 进行高质量音频采集
+- 🤖 **本地转写**：SenseVoice ONNX 模型，离线语音识别
+- ⌨️ **文本注入**：通过 AX API 直接插入文本到任意应用
+- 🎯 **全局快捷键**：可自定义热键（默认：右 Command 键）
+- 💬 **多语言支持**：中文、英语、日语、韩语、粤语
+
+## 🚀 快速开始
+
+### 环境要求
+
+- macOS（主要支持平台）
+- Node.js 22.x
+- npm 或 yarn
+
+### 安装
+
+```bash
+# 安装依赖（自动下载模型）
+npm install
+
+# 开发模式启动
+npm run dev
+```
+
+### 构建
+
+```bash
+# 构建生产版本
+npm run build
+
+# 构建产物位于 `release/` 目录
+```
+
+## 📁 项目结构
+
+```
+├── electron/          # 主进程与预加载脚本
+│   ├── main.ts        # 应用入口
+│   ├── preload.cjs    # 预加载脚本（IPC 桥接）
+│   ├── audio/         # 录音模块
+│   ├── transcriber/   # 转写引擎
+│   └── services/      # 核心服务
+├── src/               # React 渲染层
+│   ├── components/    # UI 组件
+│   ├── hooks/         # 自定义 React Hooks
+│   └── lib/           # 工具库
+├── shared/            # 共享类型定义
+├── native/            # 原生扩展（AX API）
+└── scripts/           # 构建脚本
+```
+
+## 🔧 配置
+
+### 默认路径
+
+- **应用数据**：`~/Library/Application Support/SpeechTide/`
+- **模型文件**：`~/Library/Application Support/SpeechTide/models/sensevoice-small/`
+- **会话记录**：`~/Library/Application Support/SpeechTide/conversations/`
+- **日志文件**：`~/Library/Application Support/SpeechTide/logs/`
+
+### 运行时配置
+
+配置文件在首次运行时自动生成，位于：
+`~/Library/Application Support/SpeechTide/config/`
+
+- `audio.json` - 音频录制设置（采样率、最大时长）
+- `transcriber.json` - 转写引擎设置
+
+## 🤖 AI 模型
+
+### SenseVoice
+
+- **来源**：[FunAudioLLM/SenseVoice](https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17)
+- **许可证**：Apache 2.0
+- **特点**：本地运行、离线可用、多语言支持（中/英/日/韩/粤）
+
+## 📝 开发
+
+### 可用脚本
+
+```bash
+npm run dev          # 启动开发服务器
+npm run build        # 构建生产版本
+npm run lint         # 运行 ESLint
+npm run preview      # 预览生产构建
+```
+
+### 模型配置
+
+模型在 `npm install` 时自动下载。如需重新下载：
+
+```bash
+npm install
+```
+
+## 🔐 权限要求
+
+SpeechTide 需要以下 macOS 权限：
+
+- **麦克风权限**：用于录音
+- **辅助功能权限**：用于文本注入（可选）
+
+权限可通过首次启动引导流程或系统偏好设置授予。
+
+## 📄 许可证
+
+本项目采用 Apache License 2.0 许可证 - 详见 [LICENSE](LICENSE) 文件。
+
+## 🙏 致谢
+
+- [FunAudioLLM/SenseVoice](https://github.com/FunAudioLLM/SenseVoice) - 多语言语音识别模型
+- [Sherpa-ONNX](https://github.com/k2-fsa/sherpa-onnx) - 实时语音识别工具包
+- [Electron](https://electronjs.org/) - 跨平台桌面应用框架
+- [React](https://reactjs.org/) - 用户界面库
+
+## 📧 联系方式
+
+- **邮箱**：speechtide@chanler.dev
+- **仓库**：https://github.com/ChanlerDev/speechtide
+
