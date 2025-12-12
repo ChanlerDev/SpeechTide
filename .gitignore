@@ -45,6 +45,9 @@ models
 CLAUDE.md
 AGENTS.md
 
+# AI communication notes
+notes
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -60,3 +63,4 @@ AGENTS.md
 *.tmp
 *.temp
 Thumbs.db
+notes/shortcut-enhancement-discussion.md

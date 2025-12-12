@@ -5,14 +5,14 @@
 
 [中文](README.md) | English
 
-SpeechTide is a cross-platform voice-to-text assistant focused on macOS, built with Electron + React + TypeScript. It implements a complete workflow of "tray/shortcut/recording/transcription/text injection" using local SenseVoice models for speech recognition.
+SpeechTide is a voice input assistant that enables offline transcription through the local SenseVoice Small model. This is a personal tool created through Vibe Coding, with unstable iterations.
 
 ## ✨ Features
 
 - 🎙️ **Voice Recording**: High-quality audio capture using Electron native API
 - 🤖 **Local Transcription**: SenseVoice ONNX model for offline speech recognition
 - ⌨️ **Text Injection**: Direct text insertion using AX API
-- 🎯 **Global Shortcut**: Customizable hotkeys (default: Right Command key)
+- 🎯 **Global Shortcut**: Customizable hotkeys (default: ⌘ Right key)
 - 💬 **Multi-language**: Supports Chinese, English, Japanese, Korean, and Cantonese
 
 ## 🚀 Quick Start
@@ -85,31 +85,12 @@ Configuration files are automatically generated on first run at:
 - **License**: Apache 2.0
 - **Features**: Local, offline, multi-language support (Chinese, English, Japanese, Korean, Cantonese)
 
-## 📝 Development
-
-### Available Scripts
-
-```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run lint         # Run ESLint
-npm run preview      # Preview production build
-```
-
-### Model Setup
-
-Models are automatically downloaded during `npm install`. If needed, you can reinstall:
-
-```bash
-npm install
-```
-
 ## 🔐 Permissions
 
 SpeechTide requires the following macOS permissions:
 
 - **Microphone Access**: For audio recording
-- **Accessibility Access**: For text injection (optional)
+- **Accessibility Access**: For text injection
 
 Permissions can be granted through the onboarding flow or System Preferences.
 

@@ -5,14 +5,14 @@
 
 中文 | [English](README_EN.md)
 
-SpeechTide 是一个以 macOS 为优先的跨平台语音输入助手，基于 Electron + React + TypeScript 构建。使用本地 SenseVoice 模型实现"托盘/快捷键/录音/转写/文本注入"的完整工作流。
+SpeechTide 是一个语音输入助手，通过本地模型 SenseVoice Small 实现离线转录功能。为本人 Vibe Coding 出的个人工具，迭代不稳定。
 
 ## ✨ 功能特性
 
 - 🎙️ **语音录制**：使用 Electron 原生 API 进行高质量音频采集
 - 🤖 **本地转写**：SenseVoice ONNX 模型，离线语音识别
 - ⌨️ **文本注入**：通过 AX API 直接插入文本到任意应用
-- 🎯 **全局快捷键**：可自定义热键（默认：右 Command 键）
+- 🎯 **全局快捷键**：可自定义热键（默认：⌘ Right 键）
 - 💬 **多语言支持**：中文、英语、日语、韩语、粤语
 
 ## 🚀 快速开始
@@ -85,31 +85,12 @@ npm run build
 - **许可证**：Apache 2.0
 - **特点**：本地运行、离线可用、多语言支持（中/英/日/韩/粤）
 
-## 📝 开发
-
-### 可用脚本
-
-```bash
-npm run dev          # 启动开发服务器
-npm run build        # 构建生产版本
-npm run lint         # 运行 ESLint
-npm run preview      # 预览生产构建
-```
-
-### 模型配置
-
-模型在 `npm install` 时自动下载。如需重新下载：
-
-```bash
-npm install
-```
-
 ## 🔐 权限要求
 
 SpeechTide 需要以下 macOS 权限：
 
 - **麦克风权限**：用于录音
-- **辅助功能权限**：用于文本注入（可选）
+- **辅助功能权限**：用于文本注入
 
 权限可通过首次启动引导流程或系统偏好设置授予。
 
