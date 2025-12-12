@@ -41,6 +41,7 @@ async function buildElectron() {
         'onnxruntime-common',
         'pino',
         'pino-pretty',
+        'uiohook-napi',
       ],
     })
 

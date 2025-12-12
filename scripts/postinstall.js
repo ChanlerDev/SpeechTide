@@ -100,12 +100,16 @@ async function downloadModels() {
     console.log('   您可以：')
     console.log('   1. 稍后重新运行 npm install')
     console.log('   2. 手动下载模型文件到上述目录')
-    console.log('   3. 查看文档: https://speechtide.app/docs/setup\n')
   }
 }
 
 async function main() {
   try {
+    if (process.env.SPEECHTIDE_SKIP_MODEL_DOWNLOAD === '1' || process.env.CI === 'true') {
+      console.log('✅ SpeechTide CI 环境：跳过模型下载')
+      return
+    }
+
     if (checkModelExists()) {
       console.log('✅ SpeechTide 模型已存在，跳过下载')
       return
