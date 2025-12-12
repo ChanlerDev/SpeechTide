@@ -14,6 +14,7 @@ export interface IPCHandlers {
   toggleWindow: () => boolean
   getShortcut: () => ShortcutConfig
   updateShortcut: (shortcut: ShortcutConfig) => Promise<{ success: boolean; error?: string }>
+  setShortcutRecording: (recording: boolean) => void
   getSettings: () => ReturnType<typeof loadAppSettings>
   updateSettings: (settings: Partial<{
     autoInsertText: boolean
@@ -112,6 +113,11 @@ export class IPCListeners {
       return this.handlers?.playTestAudio()
     })
 
+    // 设置快捷键录入状态（暂停/恢复键盘监听）
+    ipcMain.handle('speech:set-shortcut-recording', (_event, recording: boolean) => {
+      this.handlers?.setShortcutRecording(recording)
+    })
+
     this.registered = true
     console.log('[IPCListeners] ✓ IPC 处理器注册完成')
   }
@@ -132,6 +138,7 @@ export class IPCListeners {
     ipcMain.removeHandler('speech:check-applescript-permission')
     ipcMain.removeHandler('speech:test-transcription')
     ipcMain.removeHandler('speech:play-test-audio')
+    ipcMain.removeHandler('speech:set-shortcut-recording')
 
     this.handlers = null
     this.registered = false

@@ -13,7 +13,7 @@ import type { ConversationRecord } from '../../shared/conversation'
 import { StateMachine } from './state-machine'
 import { WindowService } from '../services/window-service'
 import { TrayService } from '../services/tray-service'
-import { ShortcutService } from '../services/shortcut-service'
+import { KeyboardHookService } from '../services/keyboard-hook-service'
 import { IPCListeners } from '../listeners/ipc-listeners'
 import { ipcMain } from 'electron'
 import { AudioRecorder, RecordingHandle, RecordingResult, NativeRecordingHandle } from '../audio/audio-recorder'
@@ -35,7 +35,7 @@ export class AppController {
   private stateMachine = new StateMachine()
   private windowService: WindowService | null = null
   private trayService: TrayService | null = null
-  private shortcutService: ShortcutService | null = null
+  private keyboardHookService: KeyboardHookService | null = null
   private ipcListeners = new IPCListeners()
 
   // 业务组件
@@ -146,12 +146,9 @@ export class AppController {
     })
     this.refreshTrayMenu()
 
-    // 快捷键服务
-    this.shortcutService = new ShortcutService(this.settings.shortcut, this.recorderConfig.maxDurationMs)
-    this.shortcutService.register({
-      onTrigger: () => this.handleToggleRecording(),
-      onRelease: () => this.stopRecording('松开按键，停止录音'),
-    })
+    // 键盘钩子服务（延迟启动，等待权限检查）
+    this.keyboardHookService = new KeyboardHookService(this.settings.shortcut)
+    this.tryStartKeyboardHook()
 
     // Onboarding 服务
     const mainWindow = this.windowService.getWindow()
@@ -180,7 +177,7 @@ export class AppController {
         try {
           saveAppSettings({ shortcut })
           this.settings.shortcut = shortcut
-          this.shortcutService?.updateSettings(shortcut)
+          this.keyboardHookService?.updateConfig(shortcut)
           return { success: true }
         } catch (error) {
           return { success: false, error: String(error) }
@@ -212,6 +209,7 @@ export class AppController {
       },
       testTranscription: () => this.runTestTranscription(),
       playTestAudio: () => this.playTestAudio(),
+      setShortcutRecording: (recording) => this.setShortcutRecording(recording),
     })
   }
 
@@ -563,6 +561,47 @@ export class AppController {
   }
 
   /**
+   * 尝试启动键盘钩子
+   * 检查辅助功能权限后再启动，避免权限不足时进程退出
+   */
+  private async tryStartKeyboardHook(): Promise<void> {
+    if (!this.keyboardHookService) return
+
+    // 检查辅助功能权限
+    const permCheck = await this.appleScriptInserter.checkPermissions()
+    if (!permCheck.hasAccessibility) {
+      logger.warn('辅助功能权限未授予，跳过键盘钩子启动')
+      logger.info('请在系统偏好设置 → 安全性与隐私 → 辅助功能中授权')
+      return
+    }
+
+    // 权限已授予，启动键盘钩子
+    const started = this.keyboardHookService.start({
+      onTrigger: () => this.handleToggleRecording(),
+      onRelease: () => this.stopRecording('松开按键，停止录音'),
+    })
+
+    if (started) {
+      logger.info('键盘钩子已启动')
+    } else {
+      logger.warn('键盘钩子启动失败')
+    }
+  }
+
+  /**
+   * 设置快捷键录入状态（暂停/恢复键盘监听）
+   */
+  private setShortcutRecording(recording: boolean): void {
+    if (recording) {
+      this.keyboardHookService?.stop()
+      logger.debug('键盘钩子已暂停（录入快捷键）')
+    } else {
+      this.tryStartKeyboardHook()
+      logger.debug('键盘钩子已恢复')
+    }
+  }
+
+  /**
    * 聚焦窗口
    */
   focusWindow(forceShow?: boolean): void {
@@ -585,7 +624,7 @@ export class AppController {
       this.activeRecording.handle.forceStop()
       this.activeRecording = null
     }
-    this.shortcutService?.destroy()
+    this.keyboardHookService?.destroy()
     this.trayService?.destroy()
     this.windowService?.destroy()
     this.ipcListeners.unregister()

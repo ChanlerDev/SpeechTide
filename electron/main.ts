@@ -6,7 +6,7 @@
  * @version 2.0.0
  */
 
-import { app, globalShortcut } from 'electron'
+import { app } from 'electron'
 import { AppController } from './core/app-controller'
 
 export const isMac = process.platform === 'darwin'
@@ -34,9 +34,6 @@ app.on('before-quit', () => {
 
 app.on('will-quit', () => {
   console.log('[SpeechTide] 应用即将退出，清理资源...')
-  if (app.isReady()) {
-    globalShortcut.unregisterAll()
-  }
   controller.destroy()
   console.log('[SpeechTide] ✓ 资源清理完成')
 })

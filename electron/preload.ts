@@ -39,6 +39,10 @@ const speechAPI = {
   updateShortcut(shortcut: ShortcutConfig) {
     return ipcRenderer.invoke('speech:update-shortcut', shortcut)
   },
+  /** 设置是否正在录入快捷键（暂停/恢复键盘监听） */
+  setShortcutRecording(recording: boolean) {
+    return ipcRenderer.invoke('speech:set-shortcut-recording', recording)
+  },
   /** 获取应用设置 */
   getSettings() {
     return ipcRenderer.invoke('speech:get-settings')
