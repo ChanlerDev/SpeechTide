@@ -307,7 +307,10 @@ function App() {
             shortcut={shortcut}
             isRecordingShortcut={isRecordingShortcut}
             onShortcutChange={handleShortcutChange}
-            onRecordingChange={setIsRecordingShortcut}
+            onRecordingChange={(recording) => {
+              setIsRecordingShortcut(recording)
+              window.speech.setShortcutRecording(recording)
+            }}
           />
 
           {/* 测试转录 */}
