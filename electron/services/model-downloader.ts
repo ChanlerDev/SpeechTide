@@ -54,12 +54,12 @@ const SENSEVOICE_MODEL: ModelInfo = {
   files: [
     {
       name: 'model.onnx',
-      url: 'https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/main/model.onnx',
+      url: 'https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/main/model.onnx?download=true',
       size: 228 * 1024 * 1024,
     },
     {
       name: 'tokens.txt',
-      url: 'https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/main/tokens.txt',
+      url: 'https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/main/tokens.txt?download=true',
       size: 200 * 1024,
     },
   ],

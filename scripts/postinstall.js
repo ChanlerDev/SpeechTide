@@ -4,10 +4,10 @@
  * 自动检查并下载 SenseVoice 模型（如果需要）
  */
 
-const fs = require('fs')
-const path = require('path')
-const os = require('os')
-const https = require('https')
+import fs from 'node:fs'
+import path from 'node:path'
+import os from 'node:os'
+import https from 'node:https'
 
 // 配置
 const MODEL_VERSION = '1.0.0'
