@@ -101,8 +101,8 @@ export class UpdateService {
   private configureAutoUpdater(): void {
     // 不自动下载，让用户决定
     this.autoUpdater.autoDownload = false
-    // 不自动安装
-    this.autoUpdater.autoInstallOnAppQuit = false
+    // 退出时自动安装已下载的更新
+    this.autoUpdater.autoInstallOnAppQuit = true
     // 不允许降级
     this.autoUpdater.allowDowngrade = false
 
@@ -234,13 +234,24 @@ export class UpdateService {
    */
   quitAndInstall(): void {
     logger.info('准备退出并安装更新...')
-    // 移除所有窗口关闭监听，允许真正退出
-    app.removeAllListeners('window-all-closed')
-    const windows = BrowserWindow.getAllWindows()
-    windows.forEach((win) => {
-      win.removeAllListeners('close')
-    })
-    this.autoUpdater.quitAndInstall()
+
+    try {
+      // 移除所有窗口关闭监听，允许真正退出
+      app.removeAllListeners('window-all-closed')
+      const windows = BrowserWindow.getAllWindows()
+      windows.forEach((win) => {
+        win.removeAllListeners('close')
+        win.close()
+      })
+
+      // isSilent=false: 显示安装进度
+      // isForceRunAfter=true: 安装后强制重启应用
+      this.autoUpdater.quitAndInstall(false, true)
+    } catch (error) {
+      logger.error(error instanceof Error ? error : new Error(String(error)), { context: 'quitAndInstall' })
+      // 如果 quitAndInstall 失败，尝试直接退出让用户手动重启
+      app.quit()
+    }
   }
 
   /**
