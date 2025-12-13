@@ -27,7 +27,6 @@ interface UpdateStateLocal {
 
 export const UpdateStatus = memo(() => {
   const [state, setState] = useState<UpdateStateLocal | null>(null)
-  const [checking, setChecking] = useState(false)
 
   // 初始化状态
   useEffect(() => {
@@ -38,12 +37,7 @@ export const UpdateStatus = memo(() => {
 
   // 检查更新
   const handleCheck = useCallback(async () => {
-    setChecking(true)
-    try {
-      await window.update.check()
-    } finally {
-      setChecking(false)
-    }
+    await window.update.check()
   }, [])
 
   // 下载更新
@@ -75,16 +69,15 @@ export const UpdateStatus = memo(() => {
   return (
     <div className="flex items-center justify-between text-xs text-gray-400 px-1 py-2 border-t border-gray-100">
       <div className="flex items-center gap-2 flex-1 min-w-0">
-        {/* 空闲/已是最新 */}
-        {(status === 'idle' || status === 'not-available') && (
+        {/* 空闲 */}
+        {status === 'idle' && (
           <>
             <span className="text-gray-500">v{currentVersion}</span>
             <button
               onClick={handleCheck}
-              disabled={checking}
-              className="text-blue-500 hover:text-blue-600 disabled:text-gray-400"
+              className="text-blue-500 hover:text-blue-600"
             >
-              {checking ? '检查中...' : '检查更新'}
+              检查更新
             </button>
           </>
         )}
@@ -93,10 +86,24 @@ export const UpdateStatus = memo(() => {
         {status === 'checking' && (
           <>
             <span className="text-gray-500">v{currentVersion}</span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 text-blue-500">
               <span className="animate-spin w-3 h-3 border border-blue-500 border-t-transparent rounded-full" />
               检查中...
             </span>
+          </>
+        )}
+
+        {/* 已是最新 */}
+        {status === 'not-available' && (
+          <>
+            <span className="text-gray-500">v{currentVersion}</span>
+            <span className="text-green-500">✓ 已是最新</span>
+            <button
+              onClick={handleCheck}
+              className="text-gray-400 hover:text-blue-500 text-[10px]"
+            >
+              再次检查
+            </button>
           </>
         )}
 
@@ -146,6 +153,9 @@ export const UpdateStatus = memo(() => {
         {status === 'error' && (
           <>
             <span className="text-gray-500">v{currentVersion}</span>
+            <span className="text-red-500 truncate max-w-[120px]" title={state.error}>
+              更新失败
+            </span>
             <button
               onClick={handleCheck}
               className="text-blue-500 hover:text-blue-600"
