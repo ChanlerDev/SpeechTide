@@ -40,6 +40,8 @@ jobs:
           path: |
             release/**/SpeechTide-*-mac-arm64.dmg
             release/**/SpeechTide-*-mac-arm64.dmg.blockmap
+            release/**/SpeechTide-*-mac-arm64.zip
+            release/**/SpeechTide-*-mac-arm64.zip.blockmap
             release/**/latest-mac.yml
 
       - name: Create GitHub Release
@@ -49,6 +51,8 @@ jobs:
           files: |
             release/**/SpeechTide-*-mac-arm64.dmg
             release/**/SpeechTide-*-mac-arm64.dmg.blockmap
+            release/**/SpeechTide-*-mac-arm64.zip
+            release/**/SpeechTide-*-mac-arm64.zip.blockmap
             release/**/latest-mac.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
