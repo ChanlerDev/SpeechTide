@@ -120,21 +120,6 @@ export class SenseVoiceTranscriber implements Transcriber {
     const env = { ...process.env }
     const runtimeDir = this.resolveRuntimeDirectory()
 
-    // 备用方案：直接设置路径
-    if (!runtimeDir) {
-      const appRoot = process.env.APP_ROOT ?? path.resolve(__dirname, '../..')
-      const nodeModules = path.join(appRoot, 'node_modules')
-      const arch = process.arch === 'arm64' ? 'darwin-arm64' : process.arch === 'x64' ? 'darwin-x64' : 'darwin-arm64'
-      const fallback = path.join(nodeModules, `sherpa-onnx-${arch}`)
-      if (process.platform === 'darwin' && fs.existsSync(fallback)) {
-        const key = 'DYLD_LIBRARY_PATH'
-        const currentValue = env[key]
-        if (!currentValue || !currentValue.split(':').includes(fallback)) {
-          env[key] = currentValue ? `${fallback}:${currentValue}` : fallback
-        }
-      }
-    }
-
     if (runtimeDir) {
       const key =
         process.platform === 'win32' ? 'PATH' : process.platform === 'darwin' ? 'DYLD_LIBRARY_PATH' : 'LD_LIBRARY_PATH'
@@ -163,26 +148,47 @@ export class SenseVoiceTranscriber implements Transcriber {
       }
 
       // 开发模式：使用 node_modules
-      const root = process.env.APP_ROOT ?? process.cwd()
-      const nodeModulesRoot = path.join(root, 'node_modules')
-      const candidate = path.join(nodeModulesRoot, `sherpa-onnx-${arch}`)
-      return fs.existsSync(candidate) ? candidate : null
+      // 向上遍历查找 node_modules（支持 git worktree 等特殊目录结构）
+      let searchDir = process.env.APP_ROOT ?? process.cwd()
+      const rootDir = path.parse(searchDir).root
+      while (searchDir !== rootDir) {
+        const candidate = path.join(searchDir, 'node_modules', `sherpa-onnx-${arch}`)
+        if (fs.existsSync(candidate)) {
+          return candidate
+        }
+        searchDir = path.dirname(searchDir)
+      }
+      return null
     }
     
     if (process.platform === 'linux') {
       const arch = process.arch === 'arm64' ? 'linux-arm64' : 'linux-x64'
-      const root = process.env.APP_ROOT ?? process.cwd()
-      const nodeModulesRoot = path.join(root, 'node_modules')
-      const candidate = path.join(nodeModulesRoot, `sherpa-onnx-${arch}`)
-      return fs.existsSync(candidate) ? candidate : null
+      // 向上遍历查找 node_modules（支持 git worktree 等特殊目录结构）
+      let searchDir = process.env.APP_ROOT ?? process.cwd()
+      const rootDir = path.parse(searchDir).root
+      while (searchDir !== rootDir) {
+        const candidate = path.join(searchDir, 'node_modules', `sherpa-onnx-${arch}`)
+        if (fs.existsSync(candidate)) {
+          return candidate
+        }
+        searchDir = path.dirname(searchDir)
+      }
+      return null
     }
-    
+
     if (process.platform === 'win32') {
       const arch = process.arch === 'ia32' ? 'win-ia32' : 'win-x64'
-      const root = process.env.APP_ROOT ?? process.cwd()
-      const nodeModulesRoot = path.join(root, 'node_modules')
-      const candidate = path.join(nodeModulesRoot, `sherpa-onnx-${arch}`)
-      return fs.existsSync(candidate) ? candidate : null
+      // 向上遍历查找 node_modules（支持 git worktree 等特殊目录结构）
+      let searchDir = process.env.APP_ROOT ?? process.cwd()
+      const rootDir = path.parse(searchDir).root
+      while (searchDir !== rootDir) {
+        const candidate = path.join(searchDir, 'node_modules', `sherpa-onnx-${arch}`)
+        if (fs.existsSync(candidate)) {
+          return candidate
+        }
+        searchDir = path.dirname(searchDir)
+      }
+      return null
     }
     
     return null

@@ -12,12 +12,26 @@ interface AppleScriptPermission {
   guide?: string
 }
 
+/**
+ * 模型缓存时间选项（分钟）
+ * 0 表示永不卸载
+ */
+const CACHE_TTL_OPTIONS = [
+  { value: 5, label: '5 分钟' },
+  { value: 15, label: '15 分钟' },
+  { value: 30, label: '30 分钟' },
+  { value: 60, label: '1 小时' },
+  { value: 0, label: '永不' },
+] as const
+
 interface AppSettingsProps {
   clipboardMode: boolean
   autoShowOnStart: boolean
+  cacheTTLMinutes: number
   appleScriptPermission: AppleScriptPermission | null
   onUpdateClipboardMode: (value: boolean) => Promise<void>
   onUpdateAutoShowOnStart: (value: boolean) => Promise<void>
+  onUpdateCacheTTL: (value: number) => Promise<void>
   onRefreshAppleScriptPermission: () => Promise<void>
 }
 
@@ -27,9 +41,11 @@ interface AppSettingsProps {
 export const AppSettings = memo<AppSettingsProps>(({
   clipboardMode,
   autoShowOnStart,
+  cacheTTLMinutes,
   appleScriptPermission,
   onUpdateClipboardMode,
   onUpdateAutoShowOnStart,
+  onUpdateCacheTTL,
   onRefreshAppleScriptPermission,
 }) => {
   const handleToggleClipboard = useCallback(() => {
@@ -39,6 +55,10 @@ export const AppSettings = memo<AppSettingsProps>(({
   const handleToggleAutoShow = useCallback(() => {
     onUpdateAutoShowOnStart(!autoShowOnStart)
   }, [autoShowOnStart, onUpdateAutoShowOnStart])
+
+  const handleCacheTTLChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    onUpdateCacheTTL(Number(e.target.value))
+  }, [onUpdateCacheTTL])
 
   const Toggle = ({ enabled, onToggle, label }: { enabled: boolean; onToggle: () => void; label: string }) => (
     <div className="flex items-center justify-between py-1.5">
@@ -55,10 +75,24 @@ export const AppSettings = memo<AppSettingsProps>(({
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
       <span className="text-xs font-medium text-gray-600">设置</span>
-      
+
       <div className="mt-2 divide-y divide-gray-50">
         <Toggle enabled={clipboardMode} onToggle={handleToggleClipboard} label="禁用自动插入" />
         <Toggle enabled={autoShowOnStart} onToggle={handleToggleAutoShow} label="启动时显示面板" />
+        <div className="flex items-center justify-between py-1.5">
+          <span className="text-xs text-gray-600">模型缓存时间</span>
+          <select
+            value={cacheTTLMinutes}
+            onChange={handleCacheTTLChange}
+            className="text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+          >
+            {CACHE_TTL_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {appleScriptPermission && (
