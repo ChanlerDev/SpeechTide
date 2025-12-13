@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// 确保DYLD_LIBRARY_PATH设置正确
+// DYLD_LIBRARY_PATH 应由主进程通过 fork() 的 env 参数传递
+// Worker 不应覆盖主进程设置的路径，因为：
+// 1. 主进程使用 resolveRuntimeDirectory() 智能查找正确路径
+// 2. 在 worktree 环境下，node_modules 可能不在当前项目目录
+// 3. 在生产环境下，原生库在 Resources/native/ 目录
 const path = require('path');
 const fs = require('fs');
-const expectedPath = path.join(__dirname, '../../..', 'node_modules/sherpa-onnx-darwin-arm64');
-if (!process.env.DYLD_LIBRARY_PATH || !process.env.DYLD_LIBRARY_PATH.includes(expectedPath)) {
-  process.env.DYLD_LIBRARY_PATH = expectedPath + ':' + (process.env.DYLD_LIBRARY_PATH || '');
-}
 
 const sherpa = require('sherpa-onnx-node')
 

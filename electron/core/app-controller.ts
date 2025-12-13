@@ -45,7 +45,7 @@ export class AppController {
   private readonly conversationsDir = path.join(this.supportDir, 'conversations')
   private readonly testAudioCachePath = path.join(this.supportDir, 'cache', 'test-audio.wav')
   private readonly audioRecorder = new AudioRecorder(this.conversationsDir, this.recorderConfig)
-  private readonly transcriber: Transcriber = createTranscriber(this.transcriberConfig, { supportDir: this.supportDir })
+  private transcriber: Transcriber | null = null  // 懒加载，支持动态卸载
   private readonly conversationStore = new ConversationStore(this.conversationsDir)
   private readonly appleScriptInserter = new AppleScriptTextInserter()
 
@@ -53,6 +53,7 @@ export class AppController {
   private initialized = false
   private activeRecording: { sessionId: string; handle: RecordingHandle | NativeRecordingHandle; timeout?: NodeJS.Timeout; recordingTimer?: string } | null = null
   private idleTimer: NodeJS.Timeout | null = null
+  private cacheTimer: NodeJS.Timeout | null = null  // 模型缓存卸载计时器
   private testInProgress = false
   private settings = loadAppSettings()
 
@@ -186,9 +187,28 @@ export class AppController {
       getSettings: () => loadAppSettings(),
       updateSettings: async (settings) => {
         try {
+          // 校验 cacheTTLMinutes 入参
+          if (settings.cacheTTLMinutes !== undefined) {
+            const validValues = [0, 5, 15, 30, 60]
+            if (!Number.isFinite(settings.cacheTTLMinutes) || !validValues.includes(settings.cacheTTLMinutes)) {
+              logger.warn(`无效的缓存时间值: ${settings.cacheTTLMinutes}，回退到默认值 30`)
+              settings.cacheTTLMinutes = 30
+            }
+          }
+
           saveAppSettings(settings)
+          const oldTTL = this.settings.cacheTTLMinutes
           Object.assign(this.settings, settings)
           logger.debug('设置已更新', { settings })
+
+          // 如果缓存时间变更，重新调度卸载计时器
+          if (settings.cacheTTLMinutes !== undefined && settings.cacheTTLMinutes !== oldTTL) {
+            logger.info(`缓存时间变更：${oldTTL} -> ${settings.cacheTTLMinutes} 分钟`)
+            if (this.transcriber) {
+              this.scheduleTranscriberUnload()
+            }
+          }
+
           return { success: true }
         } catch (error) {
           logger.error(error instanceof Error ? error : new Error(String(error)), { context: 'updateSettings' })
@@ -320,7 +340,8 @@ export class AppController {
     
     try {
       recordingResult = await handle.stop()
-      const transcription = await this.transcriber.transcribe(recordingResult.audioPath)
+      const transcriber = this.ensureTranscriber()
+      const transcription = await transcriber.transcribe(recordingResult.audioPath)
       metrics.endTimer(transcriptionTimer, 'transcription', {
         sessionId,
         durationMs: transcription.durationMs,
@@ -361,6 +382,9 @@ export class AppController {
         })
       }
       this.handleError('转写失败', error, sessionId)
+    } finally {
+      // 无论成功失败都刷新缓存计时器
+      this.scheduleTranscriberUnload()
     }
   }
 
@@ -442,7 +466,8 @@ export class AppController {
         await this.downloadTestAudio(this.testAudioCachePath)
       }
 
-      const transcription = await this.transcriber.transcribe(this.testAudioCachePath)
+      const transcriber = this.ensureTranscriber()
+      const transcription = await transcriber.transcribe(this.testAudioCachePath)
       const processingTime = Date.now() - startTime
 
       const record: ConversationRecord = {
@@ -466,7 +491,6 @@ export class AppController {
       })
       this.scheduleIdle()
 
-      this.testInProgress = false
       return {
         success: true,
         data: {
@@ -481,8 +505,11 @@ export class AppController {
       const detail = error instanceof Error ? error.message : String(error)
       this.stateMachine.setError(`测试转写失败：${detail}`)
       this.scheduleIdle(4000)
-      this.testInProgress = false
       return { success: false, error: detail }
+    } finally {
+      this.testInProgress = false
+      // 无论成功失败都刷新缓存计时器
+      this.scheduleTranscriberUnload()
     }
   }
 
@@ -561,6 +588,70 @@ export class AppController {
   }
 
   /**
+   * 确保转写器可用（懒加载）
+   * 如果已销毁或未初始化，则重新创建
+   * 同时取消任何待执行的卸载计时器，防止转写过程中被卸载
+   */
+  private ensureTranscriber(): Transcriber {
+    // 关键：取消待执行的卸载计时器，防止转写过程中被卸载
+    this.cancelTranscriberUnload()
+
+    if (!this.transcriber) {
+      logger.info('创建转写器实例...')
+      this.transcriber = createTranscriber(this.transcriberConfig, { supportDir: this.supportDir })
+    }
+    return this.transcriber
+  }
+
+  /**
+   * 调度转写器卸载
+   * 根据 cacheTTLMinutes 设置延迟销毁计时器
+   */
+  private scheduleTranscriberUnload(): void {
+    this.cancelTranscriberUnload()
+
+    // 验证从配置加载的 TTL 值，防止损坏的 settings.json 导致 NaN
+    const validValues = [0, 5, 15, 30, 60]
+    const rawTTL = this.settings.cacheTTLMinutes
+    const ttlMinutes = Number.isFinite(rawTTL) && validValues.includes(rawTTL) ? rawTTL : 30
+
+    if (ttlMinutes <= 0) {
+      // 0 或负数表示永不卸载
+      logger.debug('模型缓存设置为永不卸载')
+      return
+    }
+
+    const ttlMs = ttlMinutes * 60 * 1000
+    logger.info(`模型将在 ${ttlMinutes} 分钟后卸载`)
+
+    this.cacheTimer = setTimeout(() => {
+      this.unloadTranscriber()
+    }, ttlMs)
+  }
+
+  /**
+   * 取消转写器卸载计时器
+   */
+  private cancelTranscriberUnload(): void {
+    if (this.cacheTimer) {
+      clearTimeout(this.cacheTimer)
+      this.cacheTimer = null
+    }
+  }
+
+  /**
+   * 卸载转写器（终止 Worker 进程）
+   */
+  private unloadTranscriber(): void {
+    if (!this.transcriber) return
+
+    logger.info('卸载模型缓存，终止 Worker 进程')
+    this.transcriber.destroy?.()
+    this.transcriber = null
+    this.cacheTimer = null
+  }
+
+  /**
    * 尝试启动键盘钩子
    * 检查辅助功能权限后再启动，避免权限不足时进程退出
    */
@@ -620,6 +711,7 @@ export class AppController {
    */
   destroy(): void {
     this.cancelIdleTimer()
+    this.cancelTranscriberUnload()  // 清理缓存计时器
     if (this.activeRecording) {
       this.activeRecording.handle.forceStop()
       this.activeRecording = null
@@ -629,7 +721,8 @@ export class AppController {
     this.windowService?.destroy()
     this.ipcListeners.unregister()
     // 终止 transcriber worker 进程
-    this.transcriber.destroy?.()
+    this.transcriber?.destroy?.()
+    this.transcriber = null
     this.initialized = false
   }
 }
