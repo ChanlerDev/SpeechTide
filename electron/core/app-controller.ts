@@ -610,7 +610,11 @@ export class AppController {
   private scheduleTranscriberUnload(): void {
     this.cancelTranscriberUnload()
 
-    const ttlMinutes = this.settings.cacheTTLMinutes
+    // 验证从配置加载的 TTL 值，防止损坏的 settings.json 导致 NaN
+    const validValues = [0, 5, 15, 30, 60]
+    const rawTTL = this.settings.cacheTTLMinutes
+    const ttlMinutes = Number.isFinite(rawTTL) && validValues.includes(rawTTL) ? rawTTL : 30
+
     if (ttlMinutes <= 0) {
       // 0 或负数表示永不卸载
       logger.debug('模型缓存设置为永不卸载')
