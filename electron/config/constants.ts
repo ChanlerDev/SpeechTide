@@ -62,9 +62,9 @@ export const APP_CONSTANTS = {
  */
 export const WINDOW_CONFIG = {
   width: 420,
-  height: 620,
+  height: 720,
   minWidth: 380,
-  minHeight: 560,
+  minHeight: 620,
   maxWidth: 420,
-  maxHeight: 720,
+  maxHeight: 800,
 } as const

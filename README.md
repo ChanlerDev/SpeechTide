@@ -17,13 +17,21 @@ SpeechTide 是一个语音输入助手，通过本地模型 SenseVoice Small 实
 
 ## 🚀 快速开始
 
-### 环境要求
+### 安装应用
 
-- macOS（主要支持平台）
-- Node.js 22.x
-- npm 或 yarn
+从 [Releases](https://github.com/ChanlerDev/speechtide/releases) 下载最新版本，拖入 Applications 文件夹后，在终端执行：
 
-### 安装
+```bash
+xattr -dr com.apple.quarantine "/Applications/SpeechTide.app"
+```
+
+> 由于没有 Apple 开发者签名，需要移除隔离属性才能正常打开。
+
+### 从源码构建
+
+**环境要求**：macOS、Node.js 22.x、npm 或 yarn
+
+#### 安装
 
 ```bash
 # 安装依赖（自动下载模型）
@@ -33,7 +41,7 @@ npm install
 npm run dev
 ```
 
-### 构建
+#### 构建
 
 ```bash
 # 构建生产版本

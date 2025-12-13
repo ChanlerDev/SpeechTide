@@ -17,13 +17,21 @@ SpeechTide is a voice input assistant that enables offline transcription through
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Install the App
 
-- macOS (primary target)
-- Node.js 22.x
-- npm or yarn
+Download the latest version from [Releases](https://github.com/ChanlerDev/speechtide/releases), drag it to the Applications folder, then run in Terminal:
 
-### Installation
+```bash
+xattr -dr com.apple.quarantine "/Applications/SpeechTide.app"
+```
+
+> The app is not signed with an Apple Developer certificate, so you need to remove the quarantine attribute to open it.
+
+### Build from Source
+
+**Prerequisites**: macOS, Node.js 22.x, npm or yarn
+
+#### Installation
 
 ```bash
 # Install dependencies
@@ -33,7 +41,7 @@ npm install
 npm run dev
 ```
 
-### Building
+#### Building
 
 ```bash
 # Build for production
