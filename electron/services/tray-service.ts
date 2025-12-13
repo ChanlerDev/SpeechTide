@@ -33,6 +33,14 @@ export interface TrayMenuCallbacks {
   onStopRecording: () => void
   onOpenPanel: () => void
   onQuit: () => void
+  onDownloadUpdate?: () => void
+}
+
+/** 更新信息 */
+export interface UpdateInfo {
+  available: boolean
+  version?: string
+  downloaded?: boolean
 }
 
 /**
@@ -142,13 +150,14 @@ export class TrayService {
   /**
    * 刷新托盘菜单（同时更新图标）
    */
-  refreshMenu(status: SpeechFlowStatus, shortcut: ShortcutConfig): void {
+  refreshMenu(status: SpeechFlowStatus, shortcut: ShortcutConfig, updateInfo?: UpdateInfo): void {
     if (!this.tray || !this.callbacks) return
 
     // 更新图标
     this.updateIcon(status)
 
-    const contextMenu = Menu.buildFromTemplate([
+    // 构建菜单项
+    const menuItems: Electron.MenuItemConstructorOptions[] = [
       {
         label: `状态：${STATUS_LABEL[status]}`,
         enabled: false,
@@ -164,6 +173,21 @@ export class TrayService {
         enabled: status === 'recording' || status === 'transcribing',
       },
       { type: 'separator' },
+    ]
+
+    // 有更新时显示更新菜单项
+    if (updateInfo?.available && updateInfo.version) {
+      const label = updateInfo.downloaded
+        ? `✅ v${updateInfo.version} 已就绪，重启安装`
+        : `🔄 有新版本 v${updateInfo.version} 可用`
+      menuItems.push({
+        label,
+        click: () => this.callbacks?.onDownloadUpdate?.(),
+      })
+      menuItems.push({ type: 'separator' })
+    }
+
+    menuItems.push(
       {
         label: '打开面板',
         click: () => this.callbacks?.onOpenPanel(),
@@ -177,9 +201,10 @@ export class TrayService {
       {
         label: '退出 SpeechTide',
         click: () => this.callbacks?.onQuit(),
-      },
-    ])
+      }
+    )
 
+    const contextMenu = Menu.buildFromTemplate(menuItems)
     this.tray.setContextMenu(contextMenu)
   }
 

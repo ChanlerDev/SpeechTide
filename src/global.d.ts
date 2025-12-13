@@ -38,9 +38,42 @@ interface NativeRecorderAPI {
   sendComplete: (data?: ArrayBuffer | null) => void
 }
 
+/** 更新状态 */
+type UpdateStatus = 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'
+
+/** 更新进度 */
+interface UpdateProgress {
+  percent: number
+  bytesPerSecond: number
+  total: number
+  transferred: number
+}
+
+/** 更新状态信息 */
+interface UpdateState {
+  status: UpdateStatus
+  currentVersion: string
+  availableVersion?: string
+  releaseNotes?: string
+  progress?: UpdateProgress
+  error?: string
+}
+
+interface UpdateAPI {
+  getState: () => Promise<UpdateState>
+  check: () => Promise<{ hasUpdate: boolean; version?: string; error?: string }>
+  download: () => Promise<{ success: boolean; error?: string }>
+  install: () => Promise<void>
+  openReleasePage: () => Promise<void>
+  getVersion: () => Promise<string>
+  onStateChange: (callback: (state: UpdateState) => void) => () => void
+  onProgress: (callback: (progress: UpdateProgress) => void) => () => void
+}
+
 declare global {
   interface Window {
     nativeRecorder: NativeRecorderAPI
+    update: UpdateAPI
     speech: {
       onStateChange: (callback: (state: SpeechTideState) => void) => () => void
       getState: () => Promise<SpeechTideState>

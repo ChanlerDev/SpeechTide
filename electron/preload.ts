@@ -92,6 +92,46 @@ const nativeRecorderAPI = {
   },
 }
 
+// Update API - 自动更新
+const updateAPI = {
+  /** 获取更新状态 */
+  getState() {
+    return ipcRenderer.invoke('update:getState')
+  },
+  /** 检查更新 */
+  check() {
+    return ipcRenderer.invoke('update:check')
+  },
+  /** 下载更新 */
+  download() {
+    return ipcRenderer.invoke('update:download')
+  },
+  /** 立即安装（重启应用） */
+  install() {
+    return ipcRenderer.invoke('update:install')
+  },
+  /** 打开 GitHub Releases 页面 */
+  openReleasePage() {
+    return ipcRenderer.invoke('update:openReleasePage')
+  },
+  /** 获取当前版本 */
+  getVersion() {
+    return ipcRenderer.invoke('update:getVersion')
+  },
+  /** 监听状态变化 */
+  onStateChange(callback: (state: unknown) => void) {
+    const listener = (_event: IpcRendererEvent, state: unknown) => callback(state)
+    ipcRenderer.on('update:state', listener)
+    return () => ipcRenderer.off('update:state', listener)
+  },
+  /** 监听下载进度 */
+  onProgress(callback: (progress: unknown) => void) {
+    const listener = (_event: IpcRendererEvent, progress: unknown) => callback(progress)
+    ipcRenderer.on('update:progress', listener)
+    return () => ipcRenderer.off('update:progress', listener)
+  },
+}
+
 const onboardingAPI = {
   /** 获取 Onboarding 状态 */
   getState() {
@@ -161,6 +201,7 @@ try {
   contextBridge.exposeInMainWorld('speech', speechAPI)
   contextBridge.exposeInMainWorld('onboarding', onboardingAPI)
   contextBridge.exposeInMainWorld('nativeRecorder', nativeRecorderAPI)
+  contextBridge.exposeInMainWorld('update', updateAPI)
   console.log('[Preload] ✓ API 暴露成功')
 } catch (error) {
   console.error('[Preload] ❌ API 暴露失败:', error)

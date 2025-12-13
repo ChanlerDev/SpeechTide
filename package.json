@@ -24,6 +24,7 @@
     "postinstall": "node scripts/postinstall.js"
   },
   "dependencies": {
+    "electron-updater": "^6.6.2",
     "node-wav": "^0.0.2",
     "onnx-proto": "^8.0.1",
     "pino": "^10.1.0",

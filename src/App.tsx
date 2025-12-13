@@ -27,6 +27,7 @@ import { ShortcutSettings } from './components/ShortcutSettings'
 import { TestTranscription } from './components/TestTranscription'
 import { AppSettings } from './components/AppSettings'
 import { ErrorDisplay } from './components/ErrorDisplay'
+import { UpdateStatus } from './components/UpdateStatus'
 import { Onboarding } from './components/Onboarding'
 import { useNativeRecorder } from './hooks/useNativeRecorder'
 
@@ -351,6 +352,9 @@ function App() {
 
           {/* 错误显示 */}
           <ErrorDisplay error={state.error} />
+
+          {/* 更新状态 */}
+          <UpdateStatus />
         </div>
       </div>
     </div>
