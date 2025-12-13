@@ -25,6 +25,7 @@ import { STATUS_LABEL, DEFAULT_TEST_AUDIO_URL, APP_CONSTANTS } from '../config/c
 import { createModuleLogger } from '../utils/logger'
 import { metrics } from '../utils/metrics'
 import { onboardingService } from '../services/onboarding-service'
+import { updateService } from '../services/update-service'
 
 const logger = createModuleLogger('app-controller')
 
@@ -144,6 +145,7 @@ export class AppController {
       onStopRecording: () => this.handleToggleRecording(),
       onOpenPanel: () => this.focusWindow(true),
       onQuit: () => app.quit(),
+      onDownloadUpdate: () => this.handleUpdateAction(),
     })
     this.refreshTrayMenu()
 
@@ -156,6 +158,18 @@ export class AppController {
     if (mainWindow) {
       onboardingService.initialize(mainWindow)
       logger.info('Onboarding 服务已初始化')
+
+      // 更新服务
+      updateService.initialize(mainWindow)
+      // 设置状态回调，用于刷新托盘菜单
+      updateService.setStateCallback(() => {
+        this.refreshTrayMenu()
+      })
+      // 生产环境启动定时检查
+      if (!isDev) {
+        updateService.startScheduledCheck(60 * 60 * 1000)  // 1小时
+      }
+      logger.info('更新服务已初始化')
     }
   }
 
@@ -271,7 +285,27 @@ export class AppController {
    * 刷新托盘菜单
    */
   private refreshTrayMenu(): void {
-    this.trayService?.refreshMenu(this.stateMachine.getStatus(), this.settings.shortcut)
+    const updateState = updateService.getState()
+    const updateInfo = {
+      available: updateState.status === 'available' || updateState.status === 'downloaded',
+      version: updateState.availableVersion,
+      downloaded: updateState.status === 'downloaded',
+    }
+    this.trayService?.refreshMenu(this.stateMachine.getStatus(), this.settings.shortcut, updateInfo)
+  }
+
+  /**
+   * 处理更新操作（托盘菜单点击）
+   */
+  private handleUpdateAction(): void {
+    const state = updateService.getState()
+    if (state.status === 'downloaded') {
+      // 已下载，执行安装
+      updateService.quitAndInstall()
+    } else if (state.status === 'available') {
+      // 有更新，开始下载
+      updateService.downloadUpdate()
+    }
   }
 
   /**
@@ -720,6 +754,7 @@ export class AppController {
     this.trayService?.destroy()
     this.windowService?.destroy()
     this.ipcListeners.unregister()
+    updateService.destroy()
     // 终止 transcriber worker 进程
     this.transcriber?.destroy?.()
     this.transcriber = null
