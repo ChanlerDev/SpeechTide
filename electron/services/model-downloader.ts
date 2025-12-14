@@ -121,23 +121,30 @@ export class ModelDownloader {
       let lastBytes = 0
 
       const makeRequest = (requestUrl: string) => {
-        const protocol = requestUrl.startsWith('https') ? https : http
-        
-        const request = protocol.get(requestUrl, (response) => {
-          // 处理重定向
-          if (response.statusCode === 301 || response.statusCode === 302) {
-            const redirectUrl = response.headers.location
-            if (redirectUrl) {
-              file.close()
-              fs.unlinkSync(destPath)
-              makeRequest(redirectUrl)
-              return
-            }
+        let parsedUrl: URL
+        try {
+          parsedUrl = new URL(requestUrl)
+        } catch {
+          reject(new Error(`Invalid URL: ${requestUrl}`))
+          return
+        }
+
+        const protocol = parsedUrl.protocol === 'https:' ? https : http
+
+        const request = protocol.get(parsedUrl, (response) => {
+          // 处理重定向 (301, 302, 307, 308)
+          if (response.statusCode && response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+            file.close()
+            try { fs.unlinkSync(destPath) } catch { /* ignore */ }
+            // 解析相对/绝对重定向 URL
+            const redirectUrl = new URL(response.headers.location, parsedUrl).href
+            makeRequest(redirectUrl)
+            return
           }
 
           if (response.statusCode !== 200) {
             file.close()
-            fs.unlinkSync(destPath)
+            try { fs.unlinkSync(destPath) } catch { /* ignore */ }
             reject(new Error(`下载失败: HTTP ${response.statusCode}`))
             return
           }
