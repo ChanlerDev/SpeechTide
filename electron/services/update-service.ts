@@ -301,7 +301,7 @@ export class UpdateService {
 
       if (zipFile) {
         const oldFilePath = path.join(cacheDir, zipFile)
-        process.env.BLOCK_MAP_OLD_FILE = oldFilePath
+        process.env['BLOCK_MAP_OLD_FILE'] = oldFilePath
         logger.info('已设置差分下载旧文件', { oldFile: zipFile })
       } else {
         logger.info('未找到旧版本文件，将进行全量下载')
