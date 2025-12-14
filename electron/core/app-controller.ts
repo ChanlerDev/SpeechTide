@@ -548,27 +548,50 @@ export class AppController {
   }
 
   /**
-   * 下载测试音频
+   * 下载测试音频（支持重定向）
    */
   private async downloadTestAudio(targetPath: string): Promise<void> {
     const https = await import('node:https')
-    return new Promise((resolve, reject) => {
-      const file = fs.createWriteStream(targetPath)
-      https.get(DEFAULT_TEST_AUDIO_URL, (response) => {
-        if (response.statusCode !== 200) {
-          reject(new Error(`下载失败: HTTP ${response.statusCode}`))
+    const http = await import('node:http')
+
+    const download = (url: string, redirectCount = 0): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        if (redirectCount > 5) {
+          reject(new Error('下载失败: 重定向次数过多'))
           return
         }
-        response.pipe(file)
-        file.on('finish', () => {
-          file.close()
-          resolve()
+
+        const protocol = url.startsWith('https') ? https : http
+        protocol.get(url, (response) => {
+          // 处理重定向 (301, 302, 307, 308)
+          if (response.statusCode && response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+            download(response.headers.location, redirectCount + 1).then(resolve).catch(reject)
+            return
+          }
+
+          if (response.statusCode !== 200) {
+            reject(new Error(`下载失败: HTTP ${response.statusCode}`))
+            return
+          }
+
+          const file = fs.createWriteStream(targetPath)
+          response.pipe(file)
+          file.on('finish', () => {
+            file.close()
+            resolve()
+          })
+          file.on('error', (err) => {
+            fs.unlink(targetPath, () => {})
+            reject(err)
+          })
+        }).on('error', (err) => {
+          fs.unlink(targetPath, () => {})
+          reject(err)
         })
-      }).on('error', (err) => {
-        fs.unlink(targetPath, () => {})
-        reject(err)
       })
-    })
+    }
+
+    return download(DEFAULT_TEST_AUDIO_URL)
   }
 
   /**
