@@ -554,18 +554,28 @@ export class AppController {
     const https = await import('node:https')
     const http = await import('node:http')
 
-    const download = (url: string, redirectCount = 0): Promise<void> => {
+    const download = (urlString: string, redirectCount = 0): Promise<void> => {
       return new Promise((resolve, reject) => {
         if (redirectCount > 5) {
           reject(new Error('下载失败: 重定向次数过多'))
           return
         }
 
-        const protocol = url.startsWith('https') ? https : http
-        protocol.get(url, (response) => {
+        let parsedUrl: URL
+        try {
+          parsedUrl = new URL(urlString)
+        } catch {
+          reject(new Error(`Invalid URL: ${urlString}`))
+          return
+        }
+
+        const protocol = parsedUrl.protocol === 'https:' ? https : http
+        protocol.get(parsedUrl, (response) => {
           // 处理重定向 (301, 302, 307, 308)
           if (response.statusCode && response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-            download(response.headers.location, redirectCount + 1).then(resolve).catch(reject)
+            // 解析相对/绝对重定向 URL
+            const redirectUrl = new URL(response.headers.location, parsedUrl).href
+            download(redirectUrl, redirectCount + 1).then(resolve).catch(reject)
             return
           }
 
