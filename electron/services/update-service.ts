@@ -84,7 +84,8 @@ export class UpdateService {
   private checkPendingUpdate(): void {
     try {
       const homeDir = app.getPath('home')
-      const pendingPath = path.join(homeDir, 'Library', 'Caches', 'speechtide-updater', 'pending')
+      // electron-updater 在 macOS 上使用 app.{appId}.ShipIt 作为缓存目录
+      const pendingPath = path.join(homeDir, 'Library', 'Caches', 'app.speechtide.ShipIt', 'pending')
       const infoPath = path.join(pendingPath, 'update-info.json')
 
       if (fs.existsSync(infoPath)) {
@@ -282,53 +283,35 @@ export class UpdateService {
   }
 
   /**
-   * 设置差分下载环境变量
+   * 设置差分下载
    * electron-updater 会自动在其缓存目录中查找旧文件进行差分下载
-   * 我们需要确保旧文件存在于 electron-updater 的缓存目录中
+   * 我们只需要确保旧文件存在于缓存目录中
    */
   private setupDifferentialDownload(): void {
     try {
       const homeDir = app.getPath('home')
       const updaterCacheDir = path.join(homeDir, 'Library', 'Caches', 'app.speechtide.ShipIt')
-      const fallbackCacheDir = path.join(homeDir, 'Library', 'Caches', 'speechtide-updater')
 
-      // 优先使用 electron-updater 的缓存目录
-      const cacheDirs = [updaterCacheDir, fallbackCacheDir]
-
-      for (const cacheDir of cacheDirs) {
-        if (!fs.existsSync(cacheDir)) {
-          continue
-        }
-
-        const files = fs.readdirSync(cacheDir)
-        const zipFile = files.find(f => f.endsWith('.zip') && f.startsWith('SpeechTide-'))
-
-        if (zipFile) {
-          const oldFilePath = path.join(cacheDir, zipFile)
-          const stats = fs.statSync(oldFilePath)
-
-          // 如果文件在 fallback 目录，复制到 updater 目录
-          if (cacheDir === fallbackCacheDir && fs.existsSync(updaterCacheDir)) {
-            const updaterFilePath = path.join(updaterCacheDir, zipFile)
-            if (!fs.existsSync(updaterFilePath)) {
-              fs.copyFileSync(oldFilePath, updaterFilePath)
-              logger.info('已复制旧文件到 updater 缓存目录', { from: oldFilePath, to: updaterFilePath })
-            }
-          }
-
-          logger.info('找到差分下载旧文件', {
-            cacheDir,
-            oldFile: zipFile,
-            path: oldFilePath,
-            size: stats.size,
-          })
-          return
-        }
+      if (!fs.existsSync(updaterCacheDir)) {
+        logger.info('缓存目录不存在，将进行全量下载', { updaterCacheDir })
+        return
       }
 
-      logger.info('未找到旧版本文件，将进行全量下载')
+      const files = fs.readdirSync(updaterCacheDir)
+      const zipFile = files.find(f => f.endsWith('.zip') && f.startsWith('SpeechTide-'))
+
+      if (zipFile) {
+        const oldFilePath = path.join(updaterCacheDir, zipFile)
+        const stats = fs.statSync(oldFilePath)
+        logger.info('找到旧版本文件，将进行差分下载', {
+          oldFile: zipFile,
+          size: `${(stats.size / 1024 / 1024).toFixed(2)} MB`,
+        })
+      } else {
+        logger.info('未找到旧版本文件，将进行全量下载', { files })
+      }
     } catch (e) {
-      logger.warn('设置差分下载失败', { error: e instanceof Error ? e.message : String(e) })
+      logger.warn('检查差分下载条件失败', { error: e instanceof Error ? e.message : String(e) })
     }
   }
 
@@ -350,10 +333,10 @@ export class UpdateService {
    * 自定义安装（用于未签名应用）
    */
   private customInstall(): void {
-    // 正确的缓存路径: ~/Library/Caches/speechtide-updater/pending
+    // electron-updater 在 macOS 上使用 app.{appId}.ShipIt 作为缓存目录
     const homeDir = app.getPath('home')
-    const cachePath = path.join(homeDir, 'Library', 'Caches', 'speechtide-updater', 'pending')
-    const cacheParentPath = path.dirname(cachePath)
+    const updaterCacheDir = path.join(homeDir, 'Library', 'Caches', 'app.speechtide.ShipIt')
+    const pendingPath = path.join(updaterCacheDir, 'pending')
     const appPath = app.getPath('exe').replace(/\/Contents\/MacOS\/.*$/, '')
     const version = this.state.availableVersion || 'unknown'
 
@@ -361,10 +344,10 @@ export class UpdateService {
     let zipPath = ''
     let zipFileName = ''
     try {
-      const files = fs.readdirSync(cachePath)
+      const files = fs.readdirSync(pendingPath)
       const zipFile = files.find(f => f.endsWith('.zip'))
       if (zipFile) {
-        zipPath = path.join(cachePath, zipFile)
+        zipPath = path.join(pendingPath, zipFile)
         zipFileName = zipFile
       }
     } catch (e) {
@@ -372,7 +355,7 @@ export class UpdateService {
     }
 
     if (!zipPath || !fs.existsSync(zipPath)) {
-      logger.error(new Error('找不到更新文件'), { cachePath })
+      logger.error(new Error('找不到更新文件'), { pendingPath })
       this.updateState({ status: 'error', error: '找不到更新文件，请重新下载' })
       return
     }
@@ -383,6 +366,9 @@ export class UpdateService {
     const script = `#!/bin/bash
 # SpeechTide 更新安装脚本
 sleep 1
+
+# 缓存目录
+UPDATER_CACHE_DIR="${updaterCacheDir}"
 
 # 解压更新
 unzip -o -q "${zipPath}" -d /tmp/speechtide-update/
@@ -408,31 +394,20 @@ xattr -cr "${appPath}" 2>/dev/null || true
 rm -rf /tmp/speechtide-update
 
 # ====== 差分下载文件保留 ======
-# 保留当前版本的 ZIP 文件供下次差分下载使用
-# 需要保留到两个位置：
-# 1. 我们自己的缓存目录（用于安装脚本）
-# 2. electron-updater 的缓存目录（用于差分下载）
+# electron-updater 会自动在其缓存目录中查找旧文件进行差分下载
+# 我们只需要将文件从 pending 移动到主缓存目录即可
 
-# electron-updater 缓存目录
-UPDATER_CACHE_DIR="${homeDir}/Library/Caches/app.speechtide.ShipIt"
-mkdir -p "$UPDATER_CACHE_DIR" 2>/dev/null || true
-
-# 先复制到我们的缓存目录
-cp "${zipPath}" "${cacheParentPath}/${zipFileName}" 2>/dev/null || true
-
-# 再复制到 electron-updater 缓存目录（供下次差分下载使用）
+# 保留当前版本的 ZIP 文件
 cp "${zipPath}" "$UPDATER_CACHE_DIR/${zipFileName}" 2>/dev/null || true
 
-# 验证复制是否成功，成功后再清理旧文件和 pending 目录
-if [ -f "${cacheParentPath}/${zipFileName}" ]; then
+# 验证复制是否成功
+if [ -f "$UPDATER_CACHE_DIR/${zipFileName}" ]; then
   # 清理旧的缓存文件（排除刚复制的文件）
-  find "${cacheParentPath}" -maxdepth 1 -name "*.zip" -type f ! -name "${zipFileName}" -delete 2>/dev/null || true
-  # 清理 electron-updater 缓存目录的旧文件
   find "$UPDATER_CACHE_DIR" -maxdepth 1 -name "*.zip" -type f ! -name "${zipFileName}" -delete 2>/dev/null || true
   # 清理 pending 文件夹
-  rm -rf "${cachePath}"
+  rm -rf "$UPDATER_CACHE_DIR/pending"
 else
-  echo "警告：ZIP 文件保留失败，但不影响应用启动"
+  echo "警告：ZIP 文件保留失败，下次更新将全量下载"
 fi
 
 # 重新启动应用
