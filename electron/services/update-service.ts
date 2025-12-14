@@ -255,7 +255,9 @@ export class UpdateService {
    * 自定义安装（用于未签名应用）
    */
   private customInstall(): void {
-    const cachePath = path.join(app.getPath('userData'), '..', 'Caches', 'speechtide-updater', 'pending')
+    // 正确的缓存路径: ~/Library/Caches/speechtide-updater/pending
+    const homeDir = app.getPath('home')
+    const cachePath = path.join(homeDir, 'Library', 'Caches', 'speechtide-updater', 'pending')
     const appPath = app.getPath('exe').replace(/\/Contents\/MacOS\/.*$/, '')
     const version = this.state.availableVersion || 'unknown'
 
