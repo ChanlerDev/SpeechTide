@@ -117,10 +117,10 @@ function App() {
     }
     checkAppleScript()
 
-    // 加载历史记录统计
+    // 加载历史记录统计（默认7天前）
     const loadHistoryStats = async () => {
       try {
-        const stats = await window.speech.getHistoryStats()
+        const stats = await window.speech.getHistoryStats({ maxAgeDays: 7 })
         setHistoryStats(stats)
       } catch (err) {
         console.error('加载历史记录统计失败:', err)
@@ -274,9 +274,9 @@ function App() {
     }
   }
 
-  const refreshHistoryStats = async () => {
+  const refreshHistoryStats = async (maxAgeDays: number) => {
     try {
-      const stats = await window.speech.getHistoryStats()
+      const stats = await window.speech.getHistoryStats({ maxAgeDays })
       setHistoryStats(stats)
     } catch (err) {
       console.error('刷新历史记录统计失败:', err)

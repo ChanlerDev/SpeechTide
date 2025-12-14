@@ -41,7 +41,7 @@ export interface IPCHandlers {
     error?: string
   }>
   playTestAudio: () => Promise<{ success: boolean; error?: string }>
-  getHistoryStats: () => Promise<{ count: number; sizeBytes: number }>
+  getHistoryStats: (options: { maxAgeDays?: number }) => Promise<{ count: number; sizeBytes: number }>
   clearHistory: (options: { maxAgeDays?: number }) => Promise<{ success: boolean; deletedCount?: number; error?: string }>
 }
 
@@ -121,8 +121,8 @@ export class IPCListeners {
     })
 
     // 获取历史记录统计
-    ipcMain.handle('speech:get-history-stats', async () => {
-      return this.handlers?.getHistoryStats()
+    ipcMain.handle('speech:get-history-stats', async (_event, options: { maxAgeDays?: number }) => {
+      return this.handlers?.getHistoryStats(options || {})
     })
 
     // 清除历史记录

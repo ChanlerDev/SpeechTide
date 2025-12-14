@@ -244,9 +244,10 @@ export class AppController {
       testTranscription: () => this.runTestTranscription(),
       playTestAudio: () => this.playTestAudio(),
       setShortcutRecording: (recording) => this.setShortcutRecording(recording),
-      getHistoryStats: async () => {
+      getHistoryStats: async (options) => {
         try {
-          return await this.conversationStore.getStats()
+          const maxAgeDays = options?.maxAgeDays ?? 0
+          return await this.conversationStore.getStats(maxAgeDays)
         } catch (error) {
           logger.error(error instanceof Error ? error : new Error(String(error)), { context: 'getHistoryStats' })
           return { count: 0, sizeBytes: 0 }

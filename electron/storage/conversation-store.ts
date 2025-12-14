@@ -29,11 +29,14 @@ export class ConversationStore {
 
   /**
    * 获取历史记录统计信息
+   * @param maxAgeDays 统计多少天前的记录，0 表示全部
    * @returns 会话数量和总存储大小（字节）
    */
-  async getStats(): Promise<{ count: number; sizeBytes: number }> {
+  async getStats(maxAgeDays = 0): Promise<{ count: number; sizeBytes: number }> {
     let count = 0
     let sizeBytes = 0
+    const now = Date.now()
+    const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000
 
     try {
       const entries = await fs.readdir(this.baseDir, { withFileTypes: true })
@@ -44,8 +47,23 @@ export class ConversationStore {
         const uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i
         if (!uuidPattern.test(entry.name)) continue
 
-        count++
         const sessionDir = path.join(this.baseDir, entry.name)
+
+        // 如果指定了时间范围，检查是否符合条件
+        if (maxAgeDays > 0) {
+          try {
+            const metaPath = path.join(sessionDir, 'meta.json')
+            const metaContent = await fs.readFile(metaPath, 'utf-8')
+            const meta = JSON.parse(metaContent) as ConversationRecord
+            const finishedAt = meta.finishedAt || meta.startedAt || 0
+            // 只统计超过指定天数的记录
+            if (now - finishedAt <= maxAgeMs) continue
+          } catch {
+            // meta.json 不存在或损坏，视为古老记录
+          }
+        }
+
+        count++
         const files = await fs.readdir(sessionDir)
 
         for (const file of files) {

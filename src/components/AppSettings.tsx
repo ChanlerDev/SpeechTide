@@ -64,7 +64,7 @@ interface AppSettingsProps {
   onUpdateCacheTTL: (value: number) => Promise<void>
   onRefreshAppleScriptPermission: () => Promise<void>
   onClearHistory: (maxAgeDays: number) => Promise<void>
-  onRefreshHistoryStats: () => Promise<void>
+  onRefreshHistoryStats: (maxAgeDays: number) => Promise<void>
 }
 
 /**
@@ -99,10 +99,16 @@ export const AppSettings = memo<AppSettingsProps>(({
     onUpdateCacheTTL(Number(e.target.value))
   }, [onUpdateCacheTTL])
 
+  const handleAgeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newAge = Number(e.target.value)
+    setSelectedAge(newAge)
+    onRefreshHistoryStats(newAge)
+  }, [onRefreshHistoryStats])
+
   const handleClearConfirm = useCallback(async () => {
     setShowConfirm(false)
     await onClearHistory(selectedAge)
-    await onRefreshHistoryStats()
+    await onRefreshHistoryStats(selectedAge)
   }, [selectedAge, onClearHistory, onRefreshHistoryStats])
 
   const Toggle = ({ enabled, onToggle, label }: { enabled: boolean; onToggle: () => void; label: string }) => (
@@ -157,18 +163,18 @@ export const AppSettings = memo<AppSettingsProps>(({
       {historyStats && (
         <div className="mt-3 pt-2 border-t border-gray-100">
           <div className="flex items-center justify-between mb-2">
-            <div>
-              <span className="text-xs text-gray-500">历史记录</span>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {historyStats.count} 条，共 {formatBytes(historyStats.sizeBytes)}
-              </p>
-            </div>
+            <span className="text-xs text-gray-500">
+              历史记录
+              <span className="text-gray-400 ml-1">
+                {historyStats.count} 条，{formatBytes(historyStats.sizeBytes)}
+              </span>
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <select
               value={selectedAge}
-              onChange={(e) => setSelectedAge(Number(e.target.value))}
-              disabled={isClearing || historyStats.count === 0}
+              onChange={handleAgeChange}
+              disabled={isClearing}
               className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:opacity-50"
             >
               {CLEAR_AGE_OPTIONS.map((opt) => (
