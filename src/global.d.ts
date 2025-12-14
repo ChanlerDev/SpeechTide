@@ -39,7 +39,7 @@ interface NativeRecorderAPI {
 }
 
 /** 更新状态 */
-type UpdateStatus = 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'
+type UpdateStatus = 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'installing' | 'error'
 
 /** 更新进度 */
 interface UpdateProgress {

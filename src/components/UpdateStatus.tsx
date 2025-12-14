@@ -7,7 +7,7 @@
 import { memo, useState, useEffect, useCallback } from 'react'
 
 /** 更新状态类型（本地定义以避免全局类型问题） */
-type UpdateStatusType = 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'
+type UpdateStatusType = 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'installing' | 'error'
 
 interface UpdateProgress {
   percent: number
@@ -147,6 +147,14 @@ export const UpdateStatus = memo(() => {
               重启安装
             </button>
           </>
+        )}
+
+        {/* 安装中 */}
+        {status === 'installing' && (
+          <span className="flex items-center gap-1 text-blue-500">
+            <span className="animate-spin w-3 h-3 border border-blue-500 border-t-transparent rounded-full" />
+            正在安装...
+          </span>
         )}
 
         {/* 错误 */}

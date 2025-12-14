@@ -22,6 +22,7 @@ export type UpdateStatus =
   | 'not-available'  // 已是最新
   | 'downloading'    // 下载中
   | 'downloaded'     // 下载完成
+  | 'installing'     // 安装中
   | 'error'          // 错误
 
 /** 更新进度 */
@@ -65,6 +66,7 @@ export class UpdateService {
   private state: UpdateState
   private checkInterval: NodeJS.Timeout | null = null
   private stateCallback: UpdateStateCallback | null = null
+  private isInstalling = false  // 安装中标志，忽略此期间的错误
 
   constructor() {
     this.autoUpdater = getAutoUpdater()
@@ -154,6 +156,11 @@ export class UpdateService {
     })
 
     this.autoUpdater.on('error', (error) => {
+      // 安装过程中忽略错误（因为自定义安装器会接管）
+      if (this.isInstalling) {
+        logger.warn('安装过程中忽略 autoUpdater 错误', { error: error.message })
+        return
+      }
       this.updateState({
         status: 'error',
         error: error.message,
@@ -237,6 +244,10 @@ export class UpdateService {
    */
   quitAndInstall(): void {
     logger.info('准备退出并安装更新...')
+
+    // 设置安装中状态，防止错误事件干扰
+    this.isInstalling = true
+    this.updateState({ status: 'installing' })
 
     try {
       // 先尝试标准的 quitAndInstall
@@ -351,11 +362,20 @@ open "${appPath}"
 
     // 启动时延迟检查，避免启动时网络阻塞
     setTimeout(() => {
+      // 如果已下载或正在安装，不要检查（避免干扰）
+      if (this.state.status === 'downloaded' || this.state.status === 'installing') {
+        logger.info('已有下载完成的更新，跳过启动检查')
+        return
+      }
       this.checkForUpdates().catch((e) => logger.error(e))
     }, 5000)
 
     // 定时检查
     this.checkInterval = setInterval(() => {
+      // 如果已下载或正在安装，不要检查
+      if (this.state.status === 'downloaded' || this.state.status === 'installing') {
+        return
+      }
       this.checkForUpdates().catch((e) => logger.error(e))
     }, intervalMs)
 
