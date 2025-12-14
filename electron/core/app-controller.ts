@@ -516,9 +516,12 @@ export class AppController {
     const startTime = Date.now()
 
     try {
-      this.stateMachine.setTranscribing('正在下载测试音频并转写...', { sessionId })
+      // 检查是否需要下载
+      const needsDownload = !fs.existsSync(this.testAudioCachePath)
+      const message = needsDownload ? '正在下载测试音频并转写...' : '正在转写测试音频...'
+      this.stateMachine.setTranscribing(message, { sessionId })
 
-      if (!fs.existsSync(this.testAudioCachePath)) {
+      if (needsDownload) {
         await this.downloadTestAudio(this.testAudioCachePath)
       }
 
