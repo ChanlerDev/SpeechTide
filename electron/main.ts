@@ -3,7 +3,7 @@
  *
  * @description 应用启动入口，负责初始化 AppController 和处理应用生命周期事件
  * @author SpeechTide Team
- * @version 2.0.0
+ * @version see package.json
  */
 
 import { app } from 'electron'

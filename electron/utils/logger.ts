@@ -72,7 +72,7 @@ function createPinoLogger(config: LoggerConfig): pino.Logger {
 
   return pino({
     level: config.level,
-    base: { app: 'SpeechTide', version: '2.0.0' },
+    base: { app: 'SpeechTide' },  // 版本号从 app.getVersion() 在各模块动态获取
     timestamp: pino.stdTimeFunctions.isoTime,
     transport: { targets },
   })
