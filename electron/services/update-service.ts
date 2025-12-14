@@ -139,8 +139,8 @@ export class UpdateService {
   private configureAutoUpdater(): void {
     // 不自动下载，让用户决定
     this.autoUpdater.autoDownload = false
-    // 退出时自动安装已下载的更新
-    this.autoUpdater.autoInstallOnAppQuit = true
+    // 禁用退出时自动安装（我们使用自定义安装脚本，不依赖 Squirrel.Mac）
+    this.autoUpdater.autoInstallOnAppQuit = false
     // 不允许降级
     this.autoUpdater.allowDowngrade = false
 
@@ -189,9 +189,15 @@ export class UpdateService {
     })
 
     this.autoUpdater.on('error', (error) => {
-      // 安装过程中忽略错误（因为自定义安装器会接管）
-      if (this.isInstalling) {
-        logger.warn('安装过程中忽略 autoUpdater 错误', { error: error.message })
+      // 以下情况忽略错误：
+      // 1. isInstalling: 自定义安装器接管后，quitAndInstall 的错误可忽略
+      // 2. downloaded: 下载完成后 autoUpdater 可能继续验证/处理，失败不应覆盖 "已就绪" 状态
+      if (this.isInstalling || this.state.status === 'downloaded') {
+        logger.warn('忽略 autoUpdater 错误（状态保护）', {
+          error: error.message,
+          status: this.state.status,
+          isInstalling: this.isInstalling,
+        })
         return
       }
       this.updateState({
@@ -307,11 +313,13 @@ export class UpdateService {
 
     // 查找下载的 ZIP 文件
     let zipPath = ''
+    let zipFileName = ''
     try {
       const files = fs.readdirSync(cachePath)
       const zipFile = files.find(f => f.endsWith('.zip'))
       if (zipFile) {
         zipPath = path.join(cachePath, zipFile)
+        zipFileName = zipFile
       }
     } catch (e) {
       logger.error(e instanceof Error ? e : new Error(String(e)), { context: 'customInstall:findZip' })
@@ -325,8 +333,10 @@ export class UpdateService {
 
     logger.info('使用自定义安装', { zipPath, appPath, version })
 
-    // 计算缓存目录路径
+    // 计算缓存目录路径（用于保留差分下载文件）
     const cacheParentPath = path.dirname(cachePath)
+    // blockmap 文件名（与 zip 同名但扩展名不同）
+    const blockmapFileName = zipFileName.replace('.zip', '.zip.blockmap')
 
     // 创建安装脚本
     const script = `#!/bin/bash
@@ -356,11 +366,22 @@ xattr -cr "${appPath}" 2>/dev/null || true
 # 清理临时文件
 rm -rf /tmp/speechtide-update
 
-# 保留当前版本的 zip 用于下次差分下载
-# 将 pending 里的 zip 移动到 update.zip
-mv "${zipPath}" "${cacheParentPath}/update.zip" 2>/dev/null || true
+# ====== 差分下载文件保留 ======
+# electron-updater 需要以下文件用于差分下载：
+# 1. ZIP 文件（保留原始文件名）
+# 2. blockmap 文件
 
-# 清理 pending 文件夹（但保留 update.zip）
+# 清理旧的缓存文件（保留最新版本）
+find "${cacheParentPath}" -maxdepth 1 -name "*.zip" -type f -delete 2>/dev/null || true
+find "${cacheParentPath}" -maxdepth 1 -name "*.blockmap" -type f -delete 2>/dev/null || true
+
+# 移动当前版本的 zip 和 blockmap 到缓存根目录
+mv "${zipPath}" "${cacheParentPath}/${zipFileName}" 2>/dev/null || true
+if [ -f "${cachePath}/${blockmapFileName}" ]; then
+  mv "${cachePath}/${blockmapFileName}" "${cacheParentPath}/${blockmapFileName}" 2>/dev/null || true
+fi
+
+# 清理 pending 文件夹
 rm -rf "${cachePath}"
 
 # 重新启动应用
