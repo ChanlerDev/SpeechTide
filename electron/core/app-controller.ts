@@ -244,6 +244,25 @@ export class AppController {
       testTranscription: () => this.runTestTranscription(),
       playTestAudio: () => this.playTestAudio(),
       setShortcutRecording: (recording) => this.setShortcutRecording(recording),
+      getHistoryStats: async () => {
+        try {
+          return await this.conversationStore.getStats()
+        } catch (error) {
+          logger.error(error instanceof Error ? error : new Error(String(error)), { context: 'getHistoryStats' })
+          return { count: 0, sizeBytes: 0 }
+        }
+      },
+      clearHistory: async (options) => {
+        try {
+          const maxAgeDays = options?.maxAgeDays ?? 0
+          const result = await this.conversationStore.clearByAge(maxAgeDays)
+          logger.info('历史记录已清除', { maxAgeDays, deletedCount: result.deletedCount })
+          return { success: true, deletedCount: result.deletedCount }
+        } catch (error) {
+          logger.error(error instanceof Error ? error : new Error(String(error)), { context: 'clearHistory' })
+          return { success: false, error: String(error) }
+        }
+      },
     })
   }
 

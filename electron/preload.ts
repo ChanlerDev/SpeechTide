@@ -59,6 +59,14 @@ const speechAPI = {
   playTestAudio() {
     return ipcRenderer.invoke('speech:play-test-audio')
   },
+  /** 获取历史记录统计信息 */
+  getHistoryStats() {
+    return ipcRenderer.invoke('speech:get-history-stats')
+  },
+  /** 清除历史记录 */
+  clearHistory(options?: { maxAgeDays?: number }) {
+    return ipcRenderer.invoke('speech:clear-history', options || {})
+  },
   /** 监听音频播放事件 */
   onPlayAudio(callback: (audioPath: string) => void) {
     const listener = (_event: IpcRendererEvent, audioPath: string) => {

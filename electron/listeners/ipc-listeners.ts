@@ -41,6 +41,8 @@ export interface IPCHandlers {
     error?: string
   }>
   playTestAudio: () => Promise<{ success: boolean; error?: string }>
+  getHistoryStats: () => Promise<{ count: number; sizeBytes: number }>
+  clearHistory: (options: { maxAgeDays?: number }) => Promise<{ success: boolean; deletedCount?: number; error?: string }>
 }
 
 /**
@@ -118,6 +120,16 @@ export class IPCListeners {
       this.handlers?.setShortcutRecording(recording)
     })
 
+    // 获取历史记录统计
+    ipcMain.handle('speech:get-history-stats', async () => {
+      return this.handlers?.getHistoryStats()
+    })
+
+    // 清除历史记录
+    ipcMain.handle('speech:clear-history', async (_event, options: { maxAgeDays?: number }) => {
+      return this.handlers?.clearHistory(options)
+    })
+
     this.registered = true
     console.log('[IPCListeners] ✓ IPC 处理器注册完成')
   }
@@ -139,6 +151,8 @@ export class IPCListeners {
     ipcMain.removeHandler('speech:test-transcription')
     ipcMain.removeHandler('speech:play-test-audio')
     ipcMain.removeHandler('speech:set-shortcut-recording')
+    ipcMain.removeHandler('speech:get-history-stats')
+    ipcMain.removeHandler('speech:clear-history')
 
     this.handlers = null
     this.registered = false

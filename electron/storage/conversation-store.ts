@@ -26,4 +26,94 @@ export class ConversationStore {
     await fs.writeFile(metaPath, JSON.stringify(record, null, 2), 'utf-8')
     return metaPath
   }
+
+  /**
+   * 获取历史记录统计信息
+   * @returns 会话数量和总存储大小（字节）
+   */
+  async getStats(): Promise<{ count: number; sizeBytes: number }> {
+    let count = 0
+    let sizeBytes = 0
+
+    try {
+      const entries = await fs.readdir(this.baseDir, { withFileTypes: true })
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue
+
+        // 验证目录名格式（UUID），防止误计其他文件
+        const uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i
+        if (!uuidPattern.test(entry.name)) continue
+
+        count++
+        const sessionDir = path.join(this.baseDir, entry.name)
+        const files = await fs.readdir(sessionDir)
+
+        for (const file of files) {
+          const filePath = path.join(sessionDir, file)
+          const stat = await fs.stat(filePath)
+          sizeBytes += stat.size
+        }
+      }
+    } catch (error) {
+      // 目录不存在时返回空统计
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw error
+      }
+    }
+
+    return { count, sizeBytes }
+  }
+
+  /**
+   * 按时间范围清除历史记录
+   * @param maxAgeDays 清除多少天前的记录，0 表示清除全部
+   * @returns 删除的会话数量
+   */
+  async clearByAge(maxAgeDays: number): Promise<{ deletedCount: number }> {
+    let deletedCount = 0
+    const now = Date.now()
+    const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000
+
+    try {
+      const entries = await fs.readdir(this.baseDir, { withFileTypes: true })
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue
+
+        // 验证目录名格式（UUID），防止误删其他文件
+        const uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i
+        if (!uuidPattern.test(entry.name)) continue
+
+        const sessionDir = path.join(this.baseDir, entry.name)
+        let shouldDelete = false
+
+        if (maxAgeDays === 0) {
+          // 清除全部
+          shouldDelete = true
+        } else {
+          // 读取 meta.json 获取时间戳
+          try {
+            const metaPath = path.join(sessionDir, 'meta.json')
+            const metaContent = await fs.readFile(metaPath, 'utf-8')
+            const meta = JSON.parse(metaContent) as ConversationRecord
+            const finishedAt = meta.finishedAt || meta.startedAt || 0
+            shouldDelete = now - finishedAt > maxAgeMs
+          } catch {
+            // meta.json 不存在或损坏，视为古老记录可删除
+            shouldDelete = true
+          }
+        }
+
+        if (shouldDelete) {
+          await fs.rm(sessionDir, { recursive: true, force: true })
+          deletedCount++
+        }
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw error
+      }
+    }
+
+    return { deletedCount }
+  }
 }

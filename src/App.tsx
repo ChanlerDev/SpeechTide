@@ -69,6 +69,8 @@ function App() {
     message: string
     guide?: string
   } | null>(null)
+  const [historyStats, setHistoryStats] = useState<{ count: number; sizeBytes: number } | null>(null)
+  const [isClearing, setIsClearing] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   // 初始化原生录音（无需 SoX）
@@ -114,6 +116,18 @@ function App() {
       }
     }
     checkAppleScript()
+
+    // 加载历史记录统计
+    const loadHistoryStats = async () => {
+      try {
+        const stats = await window.speech.getHistoryStats()
+        setHistoryStats(stats)
+      } catch (err) {
+        console.error('加载历史记录统计失败:', err)
+        setHistoryStats({ count: 0, sizeBytes: 0 })
+      }
+    }
+    loadHistoryStats()
 
     // 监听音频播放事件
     const disposeAudio = window.speech.onPlayAudio((audioPath) => {
@@ -260,6 +274,32 @@ function App() {
     }
   }
 
+  const refreshHistoryStats = async () => {
+    try {
+      const stats = await window.speech.getHistoryStats()
+      setHistoryStats(stats)
+    } catch (err) {
+      console.error('刷新历史记录统计失败:', err)
+    }
+  }
+
+  const clearHistory = async (maxAgeDays: number) => {
+    if (isClearing) return
+    setIsClearing(true)
+    try {
+      const result = await window.speech.clearHistory({ maxAgeDays })
+      if (result.success) {
+        console.log(`已删除 ${result.deletedCount} 条历史记录`)
+      } else {
+        console.error('清除历史记录失败:', result.error)
+      }
+    } catch (err) {
+      console.error('清除历史记录失败:', err)
+    } finally {
+      setIsClearing(false)
+    }
+  }
+
   // 显示加载状态
   if (showOnboarding === null) {
     return (
@@ -344,10 +384,14 @@ function App() {
             autoShowOnStart={autoShowOnStart}
             cacheTTLMinutes={cacheTTLMinutes}
             appleScriptPermission={appleScriptPermission}
+            historyStats={historyStats}
+            isClearing={isClearing}
             onUpdateClipboardMode={updateClipboardMode}
             onUpdateAutoShowOnStart={updateAutoShowOnStart}
             onUpdateCacheTTL={updateCacheTTL}
             onRefreshAppleScriptPermission={refreshAppleScriptPermission}
+            onClearHistory={clearHistory}
+            onRefreshHistoryStats={refreshHistoryStats}
           />
 
           {/* 错误显示 */}
