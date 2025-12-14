@@ -279,6 +279,9 @@ export class UpdateService {
 
     logger.info('使用自定义安装', { zipPath, appPath, version })
 
+    // 计算缓存目录路径
+    const cacheParentPath = path.dirname(cachePath)
+
     // 创建安装脚本
     const script = `#!/bin/bash
 # SpeechTide 更新安装脚本
@@ -304,8 +307,12 @@ mv "$APP_FILE" "${appPath}"
 # 移除隔离属性（绕过 Gatekeeper）
 xattr -cr "${appPath}" 2>/dev/null || true
 
-# 清理
+# 清理临时文件
 rm -rf /tmp/speechtide-update
+
+# 清理更新缓存
+rm -rf "${cachePath}"
+rm -f "${cacheParentPath}/update.zip"
 
 # 重新启动应用
 open "${appPath}"
