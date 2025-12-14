@@ -75,6 +75,39 @@ export class UpdateService {
       currentVersion: app.getVersion(),
     }
     this.configureAutoUpdater()
+    this.checkPendingUpdate()  // 检查是否有待安装的更新
+  }
+
+  /**
+   * 检查是否有待安装的更新（启动时恢复状态）
+   */
+  private checkPendingUpdate(): void {
+    try {
+      const homeDir = app.getPath('home')
+      const pendingPath = path.join(homeDir, 'Library', 'Caches', 'speechtide-updater', 'pending')
+      const infoPath = path.join(pendingPath, 'update-info.json')
+
+      if (fs.existsSync(infoPath)) {
+        const info = JSON.parse(fs.readFileSync(infoPath, 'utf-8'))
+        const zipFile = info.fileName
+        const zipPath = path.join(pendingPath, zipFile)
+
+        if (fs.existsSync(zipPath)) {
+          // 从文件名提取版本号，如 SpeechTide-1.3.10-mac-arm64.zip
+          const match = zipFile.match(/SpeechTide-([0-9.]+)-/)
+          const version = match ? match[1] : 'unknown'
+
+          this.state = {
+            ...this.state,
+            status: 'downloaded',
+            availableVersion: version,
+          }
+          logger.info('检测到待安装的更新', { version, zipPath })
+        }
+      }
+    } catch (e) {
+      logger.warn('检查待安装更新失败', { error: e instanceof Error ? e.message : String(e) })
+    }
   }
 
   /**
@@ -323,9 +356,12 @@ xattr -cr "${appPath}" 2>/dev/null || true
 # 清理临时文件
 rm -rf /tmp/speechtide-update
 
-# 清理更新缓存
+# 保留当前版本的 zip 用于下次差分下载
+# 将 pending 里的 zip 移动到 update.zip
+mv "${zipPath}" "${cacheParentPath}/update.zip" 2>/dev/null || true
+
+# 清理 pending 文件夹（但保留 update.zip）
 rm -rf "${cachePath}"
-rm -f "${cacheParentPath}/update.zip"
 
 # 重新启动应用
 open "${appPath}"
