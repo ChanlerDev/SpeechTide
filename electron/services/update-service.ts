@@ -269,12 +269,45 @@ export class UpdateService {
    */
   async downloadUpdate(): Promise<{ success: boolean; error?: string }> {
     try {
+      // 设置旧文件路径，启用差分下载
+      this.setupDifferentialDownload()
+
       await this.autoUpdater.downloadUpdate()
       return { success: true }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       logger.error(error instanceof Error ? error : new Error(message), { context: 'downloadUpdate' })
       return { success: false, error: message }
+    }
+  }
+
+  /**
+   * 设置差分下载环境变量
+   * electron-updater 通过 BLOCK_MAP_OLD_FILE 环境变量查找旧文件进行差分下载
+   * blockmap 数据嵌入在 ZIP 文件尾部，无需单独的 .blockmap 文件
+   */
+  private setupDifferentialDownload(): void {
+    try {
+      const homeDir = app.getPath('home')
+      const cacheDir = path.join(homeDir, 'Library', 'Caches', 'speechtide-updater')
+
+      if (!fs.existsSync(cacheDir)) {
+        logger.info('缓存目录不存在，将进行全量下载')
+        return
+      }
+
+      const files = fs.readdirSync(cacheDir)
+      const zipFile = files.find(f => f.endsWith('.zip') && f.startsWith('SpeechTide-'))
+
+      if (zipFile) {
+        const oldFilePath = path.join(cacheDir, zipFile)
+        process.env.BLOCK_MAP_OLD_FILE = oldFilePath
+        logger.info('已设置差分下载旧文件', { oldFile: zipFile })
+      } else {
+        logger.info('未找到旧版本文件，将进行全量下载')
+      }
+    } catch (e) {
+      logger.warn('设置差分下载失败', { error: e instanceof Error ? e.message : String(e) })
     }
   }
 
@@ -288,17 +321,8 @@ export class UpdateService {
     this.isInstalling = true
     this.updateState({ status: 'installing' })
 
-    try {
-      // 先尝试标准的 quitAndInstall
-      this.autoUpdater.quitAndInstall(false, true)
-    } catch (error) {
-      logger.warn('标准 quitAndInstall 失败，尝试自定义安装方式', { error })
-    }
-
-    // 如果标准方式没有退出应用，使用自定义安装
-    setTimeout(() => {
-      this.customInstall()
-    }, 1000)
+    // 未签名应用直接使用自定义安装，跳过必然失败的标准方式
+    this.customInstall()
   }
 
   /**
@@ -308,6 +332,7 @@ export class UpdateService {
     // 正确的缓存路径: ~/Library/Caches/speechtide-updater/pending
     const homeDir = app.getPath('home')
     const cachePath = path.join(homeDir, 'Library', 'Caches', 'speechtide-updater', 'pending')
+    const cacheParentPath = path.dirname(cachePath)
     const appPath = app.getPath('exe').replace(/\/Contents\/MacOS\/.*$/, '')
     const version = this.state.availableVersion || 'unknown'
 
@@ -333,15 +358,10 @@ export class UpdateService {
 
     logger.info('使用自定义安装', { zipPath, appPath, version })
 
-    // 计算缓存目录路径（用于保留差分下载文件）
-    const cacheParentPath = path.dirname(cachePath)
-    // blockmap 文件名（与 zip 同名但扩展名不同）
-    const blockmapFileName = zipFileName.replace('.zip', '.zip.blockmap')
-
     // 创建安装脚本
     const script = `#!/bin/bash
 # SpeechTide 更新安装脚本
-sleep 2
+sleep 1
 
 # 解压更新
 unzip -o -q "${zipPath}" -d /tmp/speechtide-update/
@@ -367,19 +387,14 @@ xattr -cr "${appPath}" 2>/dev/null || true
 rm -rf /tmp/speechtide-update
 
 # ====== 差分下载文件保留 ======
-# electron-updater 需要以下文件用于差分下载：
-# 1. ZIP 文件（保留原始文件名）
-# 2. blockmap 文件
+# 保留当前版本的 ZIP 文件供下次差分下载使用
+# blockmap 数据嵌入在 ZIP 文件尾部，无需单独保存
 
-# 清理旧的缓存文件（保留最新版本）
+# 清理旧的缓存文件（只保留最新版本）
 find "${cacheParentPath}" -maxdepth 1 -name "*.zip" -type f -delete 2>/dev/null || true
-find "${cacheParentPath}" -maxdepth 1 -name "*.blockmap" -type f -delete 2>/dev/null || true
 
-# 移动当前版本的 zip 和 blockmap 到缓存根目录
+# 保留当前版本的 zip（原始文件名）
 mv "${zipPath}" "${cacheParentPath}/${zipFileName}" 2>/dev/null || true
-if [ -f "${cachePath}/${blockmapFileName}" ]; then
-  mv "${cachePath}/${blockmapFileName}" "${cacheParentPath}/${blockmapFileName}" 2>/dev/null || true
-fi
 
 # 清理 pending 文件夹
 rm -rf "${cachePath}"
