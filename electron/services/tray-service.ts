@@ -41,6 +41,8 @@ export interface UpdateInfo {
   available: boolean
   version?: string
   downloaded?: boolean
+  downloading?: boolean
+  installing?: boolean
 }
 
 /**
@@ -177,12 +179,21 @@ export class TrayService {
 
     // 有更新时显示更新菜单项
     if (updateInfo?.available && updateInfo.version) {
-      const label = updateInfo.downloaded
-        ? `✅ v${updateInfo.version} 已就绪，重启安装`
-        : `🔄 有新版本 v${updateInfo.version} 可用`
+      let label: string
+      if (updateInfo.installing) {
+        label = `⏳ 正在安装 v${updateInfo.version}...`
+      } else if (updateInfo.downloading) {
+        label = `⬇️ 正在下载 v${updateInfo.version}...`
+      } else if (updateInfo.downloaded) {
+        label = `✅ v${updateInfo.version} 已就绪，点击安装`
+      } else {
+        label = `🔄 有新版本 v${updateInfo.version} 可用`
+      }
+
       menuItems.push({
         label,
         click: () => this.callbacks?.onDownloadUpdate?.(),
+        enabled: !updateInfo.downloading && !updateInfo.installing,
       })
       menuItems.push({ type: 'separator' })
     }

@@ -309,9 +309,14 @@ export class AppController {
   private refreshTrayMenu(): void {
     const updateState = updateService.getState()
     const updateInfo = {
-      available: updateState.status === 'available' || updateState.status === 'downloaded',
+      available: updateState.status === 'available'
+        || updateState.status === 'downloading'
+        || updateState.status === 'downloaded'
+        || updateState.status === 'installing',
       version: updateState.availableVersion,
       downloaded: updateState.status === 'downloaded',
+      downloading: updateState.status === 'downloading',
+      installing: updateState.status === 'installing',
     }
     this.trayService?.refreshMenu(this.stateMachine.getStatus(), this.settings.shortcut, updateInfo)
   }

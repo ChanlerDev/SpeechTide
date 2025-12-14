@@ -297,14 +297,22 @@ export class UpdateService {
       }
 
       const files = fs.readdirSync(cacheDir)
+      logger.info('扫描缓存目录', { cacheDir, files })
+
       const zipFile = files.find(f => f.endsWith('.zip') && f.startsWith('SpeechTide-'))
 
       if (zipFile) {
         const oldFilePath = path.join(cacheDir, zipFile)
+        const stats = fs.statSync(oldFilePath)
         process.env['BLOCK_MAP_OLD_FILE'] = oldFilePath
-        logger.info('已设置差分下载旧文件', { oldFile: zipFile })
+        logger.info('已设置差分下载旧文件', {
+          oldFile: zipFile,
+          path: oldFilePath,
+          size: stats.size,
+          env: process.env['BLOCK_MAP_OLD_FILE'],
+        })
       } else {
-        logger.info('未找到旧版本文件，将进行全量下载')
+        logger.info('未找到旧版本文件，将进行全量下载', { files })
       }
     } catch (e) {
       logger.warn('设置差分下载失败', { error: e instanceof Error ? e.message : String(e) })
