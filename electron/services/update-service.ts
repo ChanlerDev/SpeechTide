@@ -415,6 +415,9 @@ open "${appPath}"
 
     logger.info('安装脚本已启动，准备退出应用')
 
+    // 移除 autoUpdater 的所有监听器，避免退出时触发事件导致日志错误
+    this.autoUpdater.removeAllListeners()
+
     // 退出应用
     app.removeAllListeners('window-all-closed')
     const windows = BrowserWindow.getAllWindows()
