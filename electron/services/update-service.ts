@@ -390,14 +390,18 @@ rm -rf /tmp/speechtide-update
 # 保留当前版本的 ZIP 文件供下次差分下载使用
 # blockmap 数据嵌入在 ZIP 文件尾部，无需单独保存
 
-# 清理旧的缓存文件（只保留最新版本）
-find "${cacheParentPath}" -maxdepth 1 -name "*.zip" -type f -delete 2>/dev/null || true
+# 先复制文件到缓存目录（使用 cp 而不是 mv，确保即使失败也不会丢失源文件）
+cp "${zipPath}" "${cacheParentPath}/${zipFileName}" 2>/dev/null || true
 
-# 保留当前版本的 zip（原始文件名）
-mv "${zipPath}" "${cacheParentPath}/${zipFileName}" 2>/dev/null || true
-
-# 清理 pending 文件夹
-rm -rf "${cachePath}"
+# 验证复制是否成功，成功后再清理旧文件和 pending 目录
+if [ -f "${cacheParentPath}/${zipFileName}" ]; then
+  # 清理旧的缓存文件（排除刚复制的文件）
+  find "${cacheParentPath}" -maxdepth 1 -name "*.zip" -type f ! -name "${zipFileName}" -delete 2>/dev/null || true
+  # 清理 pending 文件夹
+  rm -rf "${cachePath}"
+else
+  echo "警告：ZIP 文件保留失败，但不影响应用启动"
+fi
 
 # 重新启动应用
 open "${appPath}"
