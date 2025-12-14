@@ -256,8 +256,10 @@ export class AppController {
       clearHistory: async (options) => {
         try {
           const maxAgeDays = options?.maxAgeDays ?? 0
-          const result = await this.conversationStore.clearByAge(maxAgeDays)
-          logger.info('历史记录已清除', { maxAgeDays, deletedCount: result.deletedCount })
+          // 排除当前正在进行的会话，避免删除活跃录音
+          const excludeSessionId = this.activeRecording?.sessionId
+          const result = await this.conversationStore.clearByAge(maxAgeDays, excludeSessionId)
+          logger.info('历史记录已清除', { maxAgeDays, deletedCount: result.deletedCount, excludeSessionId })
           return { success: true, deletedCount: result.deletedCount }
         } catch (error) {
           logger.error(error instanceof Error ? error : new Error(String(error)), { context: 'clearHistory' })

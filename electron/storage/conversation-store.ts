@@ -85,9 +85,10 @@ export class ConversationStore {
   /**
    * 按时间范围清除历史记录
    * @param maxAgeDays 清除多少天前的记录，0 表示清除全部
+   * @param excludeSessionId 要排除的会话ID（避免删除正在进行的会话）
    * @returns 删除的会话数量
    */
-  async clearByAge(maxAgeDays: number): Promise<{ deletedCount: number }> {
+  async clearByAge(maxAgeDays: number, excludeSessionId?: string): Promise<{ deletedCount: number }> {
     let deletedCount = 0
     const now = Date.now()
     const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000
@@ -100,6 +101,9 @@ export class ConversationStore {
         // 验证目录名格式（UUID），防止误删其他文件
         const uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i
         if (!uuidPattern.test(entry.name)) continue
+
+        // 跳过当前正在进行的会话
+        if (excludeSessionId && entry.name === excludeSessionId) continue
 
         const sessionDir = path.join(this.baseDir, entry.name)
         let shouldDelete = false
