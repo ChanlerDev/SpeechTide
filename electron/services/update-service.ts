@@ -8,6 +8,9 @@
 import { BrowserWindow, ipcMain, app, shell } from 'electron'
 import electronUpdater, { type AppUpdater, type UpdateInfo } from 'electron-updater'
 import { createModuleLogger } from '../utils/logger'
+import { spawn } from 'child_process'
+import * as path from 'path'
+import * as fs from 'fs'
 
 const logger = createModuleLogger('update-service')
 
@@ -230,28 +233,104 @@ export class UpdateService {
   }
 
   /**
-   * 退出并安装
+   * 退出并安装（自定义实现，绕过 Squirrel.Mac）
    */
   quitAndInstall(): void {
     logger.info('准备退出并安装更新...')
 
     try {
-      // 移除所有窗口关闭监听，允许真正退出
-      app.removeAllListeners('window-all-closed')
-      const windows = BrowserWindow.getAllWindows()
-      windows.forEach((win) => {
-        win.removeAllListeners('close')
-        win.close()
-      })
-
-      // isSilent=false: 显示安装进度
-      // isForceRunAfter=true: 安装后强制重启应用
+      // 先尝试标准的 quitAndInstall
       this.autoUpdater.quitAndInstall(false, true)
     } catch (error) {
-      logger.error(error instanceof Error ? error : new Error(String(error)), { context: 'quitAndInstall' })
-      // 如果 quitAndInstall 失败，尝试直接退出让用户手动重启
-      app.quit()
+      logger.warn('标准 quitAndInstall 失败，尝试自定义安装方式', { error })
     }
+
+    // 如果标准方式没有退出应用，使用自定义安装
+    setTimeout(() => {
+      this.customInstall()
+    }, 1000)
+  }
+
+  /**
+   * 自定义安装（用于未签名应用）
+   */
+  private customInstall(): void {
+    const cachePath = path.join(app.getPath('userData'), '..', 'Caches', 'speechtide-updater', 'pending')
+    const appPath = app.getPath('exe').replace(/\/Contents\/MacOS\/.*$/, '')
+    const version = this.state.availableVersion || 'unknown'
+
+    // 查找下载的 ZIP 文件
+    let zipPath = ''
+    try {
+      const files = fs.readdirSync(cachePath)
+      const zipFile = files.find(f => f.endsWith('.zip'))
+      if (zipFile) {
+        zipPath = path.join(cachePath, zipFile)
+      }
+    } catch (e) {
+      logger.error(e instanceof Error ? e : new Error(String(e)), { context: 'customInstall:findZip' })
+    }
+
+    if (!zipPath || !fs.existsSync(zipPath)) {
+      logger.error(new Error('找不到更新文件'), { cachePath })
+      this.updateState({ status: 'error', error: '找不到更新文件，请重新下载' })
+      return
+    }
+
+    logger.info('使用自定义安装', { zipPath, appPath, version })
+
+    // 创建安装脚本
+    const script = `#!/bin/bash
+# SpeechTide 更新安装脚本
+sleep 2
+
+# 解压更新
+unzip -o -q "${zipPath}" -d /tmp/speechtide-update/
+
+# 查找解压后的 .app
+APP_FILE=$(find /tmp/speechtide-update -name "*.app" -maxdepth 1 -type d | head -1)
+
+if [ -z "$APP_FILE" ]; then
+  echo "错误：找不到应用文件"
+  exit 1
+fi
+
+# 删除旧应用
+rm -rf "${appPath}"
+
+# 移动新应用
+mv "$APP_FILE" "${appPath}"
+
+# 移除隔离属性（绕过 Gatekeeper）
+xattr -cr "${appPath}" 2>/dev/null || true
+
+# 清理
+rm -rf /tmp/speechtide-update
+
+# 重新启动应用
+open "${appPath}"
+`
+
+    const scriptPath = path.join(app.getPath('temp'), 'speechtide-update.sh')
+    fs.writeFileSync(scriptPath, script, { mode: 0o755 })
+
+    // 执行安装脚本（后台运行）
+    const child = spawn('bash', [scriptPath], {
+      detached: true,
+      stdio: 'ignore',
+    })
+    child.unref()
+
+    logger.info('安装脚本已启动，准备退出应用')
+
+    // 退出应用
+    app.removeAllListeners('window-all-closed')
+    const windows = BrowserWindow.getAllWindows()
+    windows.forEach((win) => {
+      win.removeAllListeners('close')
+      win.destroy()
+    })
+    app.quit()
   }
 
   /**
