@@ -1,6 +1,21 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import type { ConversationRecord } from '../../shared/conversation'
+import { createModuleLogger } from '../utils/logger'
+
+const logger = createModuleLogger('conversation-store')
+
+/** UUID 格式正则表达式 */
+const UUID_PATTERN = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i
+
+/**
+ * 判断是否为预期的文件读取错误（文件不存在或JSON解析失败）
+ */
+function isExpectedMetaError(error: unknown): boolean {
+  if (error instanceof SyntaxError) return true
+  if ((error as NodeJS.ErrnoException).code === 'ENOENT') return true
+  return false
+}
 
 export class ConversationStore {
   constructor(private readonly baseDir: string) {}
@@ -44,8 +59,7 @@ export class ConversationStore {
         if (!entry.isDirectory()) continue
 
         // 验证目录名格式（UUID），防止误计其他文件
-        const uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i
-        if (!uuidPattern.test(entry.name)) continue
+        if (!UUID_PATTERN.test(entry.name)) continue
 
         const sessionDir = path.join(this.baseDir, entry.name)
 
@@ -58,8 +72,15 @@ export class ConversationStore {
             const finishedAt = meta.finishedAt || meta.startedAt || 0
             // 只统计超过指定天数的记录
             if (now - finishedAt <= maxAgeMs) continue
-          } catch {
-            // meta.json 不存在或损坏，视为古老记录
+          } catch (error) {
+            // 仅对预期错误（文件不存在或JSON损坏）静默处理，视为古老记录
+            if (!isExpectedMetaError(error)) {
+              logger.warn('读取会话元数据时发生意外错误', {
+                sessionId: entry.name,
+                error: error instanceof Error ? error.message : String(error),
+                code: (error as NodeJS.ErrnoException).code,
+              })
+            }
           }
         }
 
@@ -99,8 +120,7 @@ export class ConversationStore {
         if (!entry.isDirectory()) continue
 
         // 验证目录名格式（UUID），防止误删其他文件
-        const uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i
-        if (!uuidPattern.test(entry.name)) continue
+        if (!UUID_PATTERN.test(entry.name)) continue
 
         // 跳过当前正在进行的会话
         if (excludeSessionId && entry.name === excludeSessionId) continue
@@ -119,9 +139,19 @@ export class ConversationStore {
             const meta = JSON.parse(metaContent) as ConversationRecord
             const finishedAt = meta.finishedAt || meta.startedAt || 0
             shouldDelete = now - finishedAt > maxAgeMs
-          } catch {
-            // meta.json 不存在或损坏，视为古老记录可删除
-            shouldDelete = true
+          } catch (error) {
+            // 仅对预期错误（文件不存在或JSON损坏）允许删除
+            if (isExpectedMetaError(error)) {
+              shouldDelete = true
+            } else {
+              // 非预期错误（权限、IO等）跳过该会话，避免误删
+              logger.error(error instanceof Error ? error : new Error(String(error)), {
+                context: 'clearByAge',
+                sessionId: entry.name,
+                code: (error as NodeJS.ErrnoException).code,
+              })
+              shouldDelete = false
+            }
           }
         }
 

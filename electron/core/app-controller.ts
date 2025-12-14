@@ -250,7 +250,7 @@ export class AppController {
           return await this.conversationStore.getStats(maxAgeDays)
         } catch (error) {
           logger.error(error instanceof Error ? error : new Error(String(error)), { context: 'getHistoryStats' })
-          return { count: 0, sizeBytes: 0 }
+          return { count: 0, sizeBytes: 0, error: '加载历史统计失败' }
         }
       },
       clearHistory: async (options) => {

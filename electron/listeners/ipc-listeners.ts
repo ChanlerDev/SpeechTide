@@ -41,7 +41,7 @@ export interface IPCHandlers {
     error?: string
   }>
   playTestAudio: () => Promise<{ success: boolean; error?: string }>
-  getHistoryStats: (options: { maxAgeDays?: number }) => Promise<{ count: number; sizeBytes: number }>
+  getHistoryStats: (options: { maxAgeDays?: number }) => Promise<{ count: number; sizeBytes: number; error?: string }>
   clearHistory: (options: { maxAgeDays?: number }) => Promise<{ success: boolean; deletedCount?: number; error?: string }>
 }
 

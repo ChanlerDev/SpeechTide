@@ -69,8 +69,9 @@ function App() {
     message: string
     guide?: string
   } | null>(null)
-  const [historyStats, setHistoryStats] = useState<{ count: number; sizeBytes: number } | null>(null)
+  const [historyStats, setHistoryStats] = useState<{ count: number; sizeBytes: number; error?: string } | null>(null)
   const [isClearing, setIsClearing] = useState(false)
+  const [clearError, setClearError] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   // 初始化原生录音（无需 SoX）
@@ -124,7 +125,7 @@ function App() {
         setHistoryStats(stats)
       } catch (err) {
         console.error('加载历史记录统计失败:', err)
-        setHistoryStats({ count: 0, sizeBytes: 0 })
+        setHistoryStats({ count: 0, sizeBytes: 0, error: '加载失败' })
       }
     }
     loadHistoryStats()
@@ -280,21 +281,24 @@ function App() {
       setHistoryStats(stats)
     } catch (err) {
       console.error('刷新历史记录统计失败:', err)
+      setHistoryStats({ count: 0, sizeBytes: 0, error: '刷新失败' })
     }
   }
 
   const clearHistory = async (maxAgeDays: number) => {
     if (isClearing) return
     setIsClearing(true)
+    setClearError(null)
     try {
       const result = await window.speech.clearHistory({ maxAgeDays })
       if (result.success) {
         console.log(`已删除 ${result.deletedCount} 条历史记录`)
       } else {
-        console.error('清除历史记录失败:', result.error)
+        setClearError(result.error || '清除失败')
       }
     } catch (err) {
       console.error('清除历史记录失败:', err)
+      setClearError(err instanceof Error ? err.message : '清除失败')
     } finally {
       setIsClearing(false)
     }
@@ -386,6 +390,7 @@ function App() {
             appleScriptPermission={appleScriptPermission}
             historyStats={historyStats}
             isClearing={isClearing}
+            clearError={clearError}
             onUpdateClipboardMode={updateClipboardMode}
             onUpdateAutoShowOnStart={updateAutoShowOnStart}
             onUpdateCacheTTL={updateCacheTTL}

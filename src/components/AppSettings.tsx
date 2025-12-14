@@ -15,6 +15,7 @@ interface AppleScriptPermission {
 interface HistoryStats {
   count: number
   sizeBytes: number
+  error?: string
 }
 
 /**
@@ -59,6 +60,7 @@ interface AppSettingsProps {
   appleScriptPermission: AppleScriptPermission | null
   historyStats: HistoryStats | null
   isClearing: boolean
+  clearError: string | null
   onUpdateClipboardMode: (value: boolean) => Promise<void>
   onUpdateAutoShowOnStart: (value: boolean) => Promise<void>
   onUpdateCacheTTL: (value: number) => Promise<void>
@@ -77,6 +79,7 @@ export const AppSettings = memo<AppSettingsProps>(({
   appleScriptPermission,
   historyStats,
   isClearing,
+  clearError,
   onUpdateClipboardMode,
   onUpdateAutoShowOnStart,
   onUpdateCacheTTL,
@@ -165,9 +168,13 @@ export const AppSettings = memo<AppSettingsProps>(({
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-gray-500">
               历史记录
-              <span className="text-gray-400 ml-1">
-                {historyStats.count} 条，{formatBytes(historyStats.sizeBytes)}
-              </span>
+              {historyStats.error ? (
+                <span className="text-red-500 ml-1">{historyStats.error}</span>
+              ) : (
+                <span className="text-gray-400 ml-1">
+                  {historyStats.count} 条，{formatBytes(historyStats.sizeBytes)}
+                </span>
+              )}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -185,9 +192,9 @@ export const AppSettings = memo<AppSettingsProps>(({
             </select>
             <button
               onClick={() => setShowConfirm(true)}
-              disabled={isClearing || historyStats.count === 0}
+              disabled={isClearing || historyStats.count === 0 || !!historyStats.error}
               className={`px-2.5 py-1 text-xs rounded transition-colors ${
-                isClearing || historyStats.count === 0
+                isClearing || historyStats.count === 0 || historyStats.error
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-red-50 text-red-600 hover:bg-red-100'
               }`}
@@ -195,6 +202,12 @@ export const AppSettings = memo<AppSettingsProps>(({
               {isClearing ? '清除中...' : '清除'}
             </button>
           </div>
+
+          {clearError && (
+            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-xs text-red-600">{clearError}</p>
+            </div>
+          )}
 
           {showConfirm && (
             <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
