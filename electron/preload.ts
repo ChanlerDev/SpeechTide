@@ -67,6 +67,18 @@ const speechAPI = {
   clearHistory(options?: { maxAgeDays?: number }) {
     return ipcRenderer.invoke('speech:clear-history', options || {})
   },
+  /** 获取历史记录列表 */
+  getHistoryList(options?: { limit?: number; offset?: number }) {
+    return ipcRenderer.invoke('speech:get-history-list', options || {})
+  },
+  /** 删除单条历史记录 */
+  deleteHistoryItem(sessionId: string) {
+    return ipcRenderer.invoke('speech:delete-history-item', sessionId)
+  },
+  /** 播放历史录音 */
+  playHistoryAudio(sessionId: string) {
+    return ipcRenderer.invoke('speech:play-history-audio', sessionId)
+  },
   /** 监听音频播放事件 */
   onPlayAudio(callback: (audioPath: string) => void) {
     const listener = (_event: IpcRendererEvent, audioPath: string) => {

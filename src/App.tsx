@@ -29,6 +29,7 @@ import { AppSettings } from './components/AppSettings'
 import { ErrorDisplay } from './components/ErrorDisplay'
 import { UpdateStatus } from './components/UpdateStatus'
 import { Onboarding } from './components/Onboarding'
+import { HistoryPanel } from './components/HistoryPanel'
 import { useNativeRecorder } from './hooks/useNativeRecorder'
 
 const INITIAL_STATE: SpeechTideState = {
@@ -52,6 +53,7 @@ interface TestResult {
  */
 function App() {
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null)
+  const [showHistory, setShowHistory] = useState(false)
   const [state, setState] = useState<SpeechTideState>(INITIAL_STATE)
   const [shortcut, setShortcut] = useState<ShortcutConfig | null>(null)
   const [isRecordingShortcut, setIsRecordingShortcut] = useState(false)
@@ -321,6 +323,11 @@ function App() {
     return <Onboarding onComplete={() => setShowOnboarding(false)} />
   }
 
+  // 显示历史记录面板
+  if (showHistory) {
+    return <HistoryPanel onBack={() => setShowHistory(false)} />
+  }
+
   // 状态指示器颜色
   const statusConfig = {
     idle: { color: 'bg-gray-400', label: '就绪' },
@@ -346,9 +353,21 @@ function App() {
                 <p className="text-xs text-gray-400 truncate max-w-[180px]">{state.message}</p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className={`w-2 h-2 rounded-full ${currentStatus.color}`} />
-              <span className="text-xs text-gray-500">{currentStatus.label}</span>
+            <div className="flex items-center gap-2">
+              {/* 历史记录按钮 */}
+              <button
+                onClick={() => setShowHistory(true)}
+                className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                title="历史记录"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
+              <div className="flex items-center gap-1.5">
+                <div className={`w-2 h-2 rounded-full ${currentStatus.color}`} />
+                <span className="text-xs text-gray-500">{currentStatus.label}</span>
+              </div>
             </div>
           </div>
 
