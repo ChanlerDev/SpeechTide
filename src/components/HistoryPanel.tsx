@@ -135,16 +135,19 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
 
   return (
     <div className="h-full bg-gradient-to-b from-slate-50 to-white flex flex-col">
+      {/* macOS 交通灯安全区域 */}
+      <div className="h-7 flex-shrink-0 bg-white/80" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
+
       {/* 头部 */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-white/80 backdrop-blur-sm">
+      <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-100 bg-white/80 backdrop-blur-sm">
         <button
           onClick={onBack}
-          className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+          className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-colors"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          返回
+          <span className="text-xs">返回</span>
         </button>
         <h2 className="text-sm font-semibold text-gray-800 flex-1">历史记录</h2>
         <span className="text-xs text-gray-400">{records.length} 条</span>
@@ -152,7 +155,7 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
 
       {/* 复制成功提示 - 固定在顶部 */}
       {copiedId && (
-        <div className="absolute top-14 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs px-3 py-1.5 rounded-full shadow-lg z-50 animate-bounce">
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs px-3 py-1.5 rounded-full shadow-lg z-50 animate-bounce">
           已复制到剪贴板
         </div>
       )}

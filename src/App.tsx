@@ -357,12 +357,13 @@ function App() {
               {/* 历史记录按钮 */}
               <button
                 onClick={() => setShowHistory(true)}
-                className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-colors"
                 title="历史记录"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
+                <span className="text-xs">历史</span>
               </button>
               <div className="flex items-center gap-1.5">
                 <div className={`w-2 h-2 rounded-full ${currentStatus.color}`} />
