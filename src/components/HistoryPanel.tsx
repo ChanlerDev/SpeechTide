@@ -318,42 +318,39 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
             <div className="w-16" /> {/* 占位保持居中 */}
           </div>
 
-          {/* 第二行：时间过滤器、统计信息和批量清除（合并到一行） */}
-          <div className="flex items-center justify-between gap-2">
-            {/* 左侧：时间过滤器 */}
-            <div className="flex items-center gap-1.5">
-              {TIME_RANGE_OPTIONS.map(option => (
-                <button
-                  key={option.value}
-                  onClick={() => setTimeFilter(option.value)}
-                  className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                    timeFilter === option.value
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-
-            {/* 右侧：统计 + 清除按钮 */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-400 whitespace-nowrap">
-                {filteredStats.count} 条 · {formatBytes(filteredStats.sizeBytes)}
-              </span>
+          {/* 第二行：时间过滤器 */}
+          <div className="flex items-center gap-1.5 mb-2">
+            {TIME_RANGE_OPTIONS.map(option => (
               <button
-                onClick={() => setShowClearConfirm(true)}
-                disabled={isClearing || deleteStats.count === 0}
-                className={`px-2 py-1 text-xs rounded-md transition-colors whitespace-nowrap ${
-                  isClearing || deleteStats.count === 0
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-red-50 text-red-600 hover:bg-red-100'
+                key={option.value}
+                onClick={() => setTimeFilter(option.value)}
+                className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                  timeFilter === option.value
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                {isClearing ? '清除中...' : '批量清除'}
+                {option.label}
               </button>
-            </div>
+            ))}
+          </div>
+
+          {/* 第三行：统计信息和批量清除 */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-400">
+              {filteredStats.count} 条 · {formatBytes(filteredStats.sizeBytes)}
+            </span>
+            <button
+              onClick={() => setShowClearConfirm(true)}
+              disabled={isClearing || deleteStats.count === 0}
+              className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                isClearing || deleteStats.count === 0
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-red-50 text-red-600 hover:bg-red-100'
+              }`}
+            >
+              {isClearing ? '清除中...' : '批量清除'}
+            </button>
           </div>
 
           {/* 复制提示（全局） */}
