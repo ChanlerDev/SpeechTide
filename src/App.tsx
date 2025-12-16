@@ -71,9 +71,6 @@ function App() {
     message: string
     guide?: string
   } | null>(null)
-  const [historyStats, setHistoryStats] = useState<{ count: number; sizeBytes: number; error?: string } | null>(null)
-  const [isClearing, setIsClearing] = useState(false)
-  const [clearError, setClearError] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   // 初始化原生录音（无需 SoX）
@@ -119,18 +116,6 @@ function App() {
       }
     }
     checkAppleScript()
-
-    // 加载历史记录统计（默认7天前）
-    const loadHistoryStats = async () => {
-      try {
-        const stats = await window.speech.getHistoryStats({ maxAgeDays: 7 })
-        setHistoryStats(stats)
-      } catch (err) {
-        console.error('加载历史记录统计失败:', err)
-        setHistoryStats({ count: 0, sizeBytes: 0, error: '加载失败' })
-      }
-    }
-    loadHistoryStats()
 
     // 监听音频播放事件
     const disposeAudio = window.speech.onPlayAudio((audioPath) => {
@@ -277,35 +262,6 @@ function App() {
     }
   }
 
-  const refreshHistoryStats = async (maxAgeDays: number) => {
-    try {
-      const stats = await window.speech.getHistoryStats({ maxAgeDays })
-      setHistoryStats(stats)
-    } catch (err) {
-      console.error('刷新历史记录统计失败:', err)
-      setHistoryStats({ count: 0, sizeBytes: 0, error: '刷新失败' })
-    }
-  }
-
-  const clearHistory = async (maxAgeDays: number) => {
-    if (isClearing) return
-    setIsClearing(true)
-    setClearError(null)
-    try {
-      const result = await window.speech.clearHistory({ maxAgeDays })
-      if (result.success) {
-        console.log(`已删除 ${result.deletedCount} 条历史记录`)
-      } else {
-        setClearError(result.error || '清除失败')
-      }
-    } catch (err) {
-      console.error('清除历史记录失败:', err)
-      setClearError(err instanceof Error ? err.message : '清除失败')
-    } finally {
-      setIsClearing(false)
-    }
-  }
-
   // 显示加载状态
   if (showOnboarding === null) {
     return (
@@ -341,23 +297,23 @@ function App() {
   return (
     <div className="h-full bg-gradient-to-b from-slate-50 to-white flex flex-col">
       <div className="flex-1 overflow-y-auto">
-        <div className="p-4 space-y-3">
+        <div className="p-3 space-y-2">
           {/* 头部状态 */}
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
-                <span className="text-white text-sm">🎙️</span>
+          <div className="flex items-center justify-between py-1.5">
+            <div className="flex items-center gap-1.5">
+              <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
+                <span className="text-white text-xs">🎙️</span>
               </div>
               <div>
                 <h1 className="text-sm font-semibold text-gray-800">SpeechTide</h1>
-                <p className="text-xs text-gray-400 truncate max-w-[180px]">{state.message}</p>
+                <p className="text-xs text-gray-400 truncate max-w-[150px]">{state.message}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {/* 历史记录按钮 */}
               <button
                 onClick={() => setShowHistory(true)}
-                className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-colors"
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-colors"
                 title="历史记录"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -365,7 +321,7 @@ function App() {
                 </svg>
                 <span className="text-xs">历史</span>
               </button>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 <div className={`w-2 h-2 rounded-full ${currentStatus.color}`} />
                 <span className="text-xs text-gray-500">{currentStatus.label}</span>
               </div>
@@ -408,15 +364,10 @@ function App() {
             autoShowOnStart={autoShowOnStart}
             cacheTTLMinutes={cacheTTLMinutes}
             appleScriptPermission={appleScriptPermission}
-            historyStats={historyStats}
-            isClearing={isClearing}
-            clearError={clearError}
             onUpdateClipboardMode={updateClipboardMode}
             onUpdateAutoShowOnStart={updateAutoShowOnStart}
             onUpdateCacheTTL={updateCacheTTL}
             onRefreshAppleScriptPermission={refreshAppleScriptPermission}
-            onClearHistory={clearHistory}
-            onRefreshHistoryStats={refreshHistoryStats}
           />
 
           {/* 错误显示 */}
