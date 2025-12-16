@@ -95,7 +95,7 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
     try {
       await navigator.clipboard.writeText(record.transcript)
       setCopiedId(record.id)
-      setTimeout(() => setCopiedId(null), 2000)
+      setTimeout(() => setCopiedId(null), 3000)
     } catch (err) {
       console.error('复制失败:', err)
     }
@@ -149,16 +149,16 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
           </svg>
           <span className="text-xs">返回</span>
         </button>
-        <h2 className="text-sm font-semibold text-gray-800 flex-1">历史记录</h2>
+        <div className="flex items-center gap-2 flex-1">
+          <h2 className="text-sm font-semibold text-gray-800">历史记录</h2>
+          {copiedId && (
+            <span className="text-xs text-green-600 font-medium animate-fade-in">
+              已复制到剪贴板
+            </span>
+          )}
+        </div>
         <span className="text-xs text-gray-400">{records.length} 条</span>
       </div>
-
-      {/* 复制成功提示 - 固定在顶部 */}
-      {copiedId && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs px-3 py-1.5 rounded-full shadow-lg z-50 animate-bounce">
-          已复制到剪贴板
-        </div>
-      )}
 
       {/* 内容区域 */}
       <div className="flex-1 overflow-y-auto">
