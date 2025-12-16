@@ -13,12 +13,12 @@ interface HistoryPanelProps {
 /** 时间范围过滤类型 */
 type TimeRangeFilter = 'all' | 'today' | 'this-week' | 'this-month' | 'older'
 
-const TIME_RANGE_OPTIONS: { value: TimeRangeFilter; label: string; days: number; type: 'all' | 'recent' | 'older' }[] = [
-  { value: 'all', label: '全部', days: 0, type: 'all' },
-  { value: 'today', label: '今天', days: 1, type: 'recent' },
-  { value: 'this-week', label: '本周', days: 7, type: 'recent' },
-  { value: 'this-month', label: '本月', days: 30, type: 'recent' },
-  { value: 'older', label: '更早', days: 30, type: 'older' },
+const TIME_RANGE_OPTIONS: { value: TimeRangeFilter; label: string }[] = [
+  { value: 'all', label: '全部' },
+  { value: 'today', label: '今天' },
+  { value: 'this-week', label: '本周' },
+  { value: 'this-month', label: '本月' },
+  { value: 'older', label: '更早' },
 ]
 
 /**
@@ -38,20 +38,39 @@ function formatBytes(bytes: number): string {
 function filterByTimeRange(records: ConversationRecord[], filter: TimeRangeFilter): ConversationRecord[] {
   if (filter === 'all') return records
 
-  const option = TIME_RANGE_OPTIONS.find(opt => opt.value === filter)
-  if (!option) return records
+  const now = new Date()
+  let cutoffTime: number
 
-  const cutoffTime = Date.now() - option.days * 24 * 60 * 60 * 1000
-
-  if (option.type === 'recent') {
-    // 最近X天：显示X天之内的记录
-    return records.filter(record => record.finishedAt >= cutoffTime)
-  } else if (option.type === 'older') {
-    // X天前：显示X天之前的记录
-    return records.filter(record => record.finishedAt < cutoffTime)
+  switch (filter) {
+    case 'today': {
+      // 今天：今天00:00:00至今
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      cutoffTime = todayStart.getTime()
+      return records.filter(record => record.finishedAt >= cutoffTime)
+    }
+    case 'this-week': {
+      // 本周：本周一00:00:00至今
+      const day = now.getDay()
+      const diff = day === 0 ? 6 : day - 1 // 周一为起始
+      const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff)
+      cutoffTime = weekStart.getTime()
+      return records.filter(record => record.finishedAt >= cutoffTime)
+    }
+    case 'this-month': {
+      // 本月：本月1号00:00:00至今
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      cutoffTime = monthStart.getTime()
+      return records.filter(record => record.finishedAt >= cutoffTime)
+    }
+    case 'older': {
+      // 更早：本月1号之前
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      cutoffTime = monthStart.getTime()
+      return records.filter(record => record.finishedAt < cutoffTime)
+    }
+    default:
+      return records
   }
-
-  return records
 }
 
 /**
