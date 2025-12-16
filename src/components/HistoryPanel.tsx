@@ -139,14 +139,14 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
   }
 
   return (
-    <div className="h-full bg-gradient-to-b from-slate-50 to-white flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-gradient-to-b from-slate-50 to-white flex flex-col">
       {/* 固定头部区域 */}
-      <div className="flex-shrink-0 sticky top-0 z-10">
+      <div className="flex-shrink-0">
         {/* macOS 交通灯安全区域 */}
         <div className="h-7 bg-white/80" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
 
         {/* 头部 */}
-        <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-100 bg-white/80 backdrop-blur-sm">
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-100 bg-white/95">
           <button
             onClick={onBack}
             className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-colors"
