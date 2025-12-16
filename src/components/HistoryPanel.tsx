@@ -3,7 +3,7 @@
  * MIT License
  */
 
-import { memo, useState, useEffect, useCallback } from 'react'
+import { memo, useState, useEffect, useCallback, useRef } from 'react'
 
 interface HistoryRecord {
   id: string
@@ -66,6 +66,7 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [playingId, setPlayingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // 加载历史记录
   const loadHistory = useCallback(async () => {
@@ -94,8 +95,12 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
     if (!record.transcript) return
     try {
       await navigator.clipboard.writeText(record.transcript)
+      // 清除之前的 timeout，防止提前消失
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
       setCopiedId(record.id)
-      setTimeout(() => setCopiedId(null), 3000)
+      copyTimeoutRef.current = setTimeout(() => setCopiedId(null), 3000)
     } catch (err) {
       console.error('复制失败:', err)
     }
@@ -134,30 +139,33 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
   }
 
   return (
-    <div className="h-full bg-gradient-to-b from-slate-50 to-white flex flex-col">
-      {/* macOS 交通灯安全区域 */}
-      <div className="h-7 flex-shrink-0 bg-white/80" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
+    <div className="h-full bg-gradient-to-b from-slate-50 to-white flex flex-col overflow-hidden">
+      {/* 固定头部区域 */}
+      <div className="flex-shrink-0 sticky top-0 z-10">
+        {/* macOS 交通灯安全区域 */}
+        <div className="h-7 bg-white/80" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
 
-      {/* 头部 */}
-      <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-100 bg-white/80 backdrop-blur-sm">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-colors"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          <span className="text-xs">返回</span>
-        </button>
-        <div className="flex items-center gap-2 flex-1">
-          <h2 className="text-sm font-semibold text-gray-800">历史记录</h2>
-          {copiedId && (
-            <span className="text-xs text-green-600 font-medium animate-fade-in">
-              已复制到剪贴板
-            </span>
-          )}
+        {/* 头部 */}
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-100 bg-white/80 backdrop-blur-sm">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="text-xs">返回</span>
+          </button>
+          <div className="flex items-center gap-2 flex-1">
+            <h2 className="text-sm font-semibold text-gray-800">历史记录</h2>
+            {copiedId && (
+              <span className="text-xs text-green-600 font-medium">
+                已复制到剪贴板
+              </span>
+            )}
+          </div>
+          <span className="text-xs text-gray-400">{records.length} 条</span>
         </div>
-        <span className="text-xs text-gray-400">{records.length} 条</span>
       </div>
 
       {/* 内容区域 */}
