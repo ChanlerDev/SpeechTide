@@ -11,14 +11,14 @@ interface HistoryPanelProps {
 }
 
 /** 时间范围过滤类型 */
-type TimeRangeFilter = 'all' | 'recent-1d' | 'recent-7d' | 'recent-30d' | 'older-30d'
+type TimeRangeFilter = 'all' | 'today' | 'this-week' | 'this-month' | 'older'
 
 const TIME_RANGE_OPTIONS: { value: TimeRangeFilter; label: string; days: number; type: 'all' | 'recent' | 'older' }[] = [
   { value: 'all', label: '全部', days: 0, type: 'all' },
-  { value: 'recent-1d', label: '最近1天', days: 1, type: 'recent' },
-  { value: 'recent-7d', label: '最近7天', days: 7, type: 'recent' },
-  { value: 'recent-30d', label: '最近30天', days: 30, type: 'recent' },
-  { value: 'older-30d', label: '30天前', days: 30, type: 'older' },
+  { value: 'today', label: '今天', days: 1, type: 'recent' },
+  { value: 'this-week', label: '本周', days: 7, type: 'recent' },
+  { value: 'this-month', label: '本月', days: 30, type: 'recent' },
+  { value: 'older', label: '更早', days: 30, type: 'older' },
 ]
 
 /**
