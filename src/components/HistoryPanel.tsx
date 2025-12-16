@@ -11,13 +11,13 @@ interface HistoryPanelProps {
 }
 
 /** 时间范围过滤类型 */
-type TimeRangeFilter = 'today' | 'this-week' | 'this-month' | 'all'
+type TimeRangeFilter = 'keep-today' | 'keep-week' | 'keep-month' | 'clear-all'
 
 const TIME_RANGE_OPTIONS: { value: TimeRangeFilter; label: string }[] = [
-  { value: 'today', label: '今天' },
-  { value: 'this-week', label: '本周' },
-  { value: 'this-month', label: '本月' },
-  { value: 'all', label: '全部' },
+  { value: 'keep-today', label: '保留今天' },
+  { value: 'keep-week', label: '保留本周' },
+  { value: 'keep-month', label: '保留本月' },
+  { value: 'clear-all', label: '全部清除' },
 ]
 
 /**
@@ -32,31 +32,31 @@ function formatBytes(bytes: number): string {
 }
 
 /**
- * 根据时间范围过滤记录（显示范围内的记录）
+ * 根据时间范围过滤记录（显示要保留的记录）
  */
 function filterByTimeRange(records: ConversationRecord[], filter: TimeRangeFilter): ConversationRecord[] {
-  if (filter === 'all') return records
+  if (filter === 'clear-all') return records // 全部清除时显示所有记录
 
   const now = new Date()
   let cutoffTime: number
 
   switch (filter) {
-    case 'today': {
-      // 今天：今天00:00:00至今
+    case 'keep-today': {
+      // 保留今天：显示今天的记录
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
       cutoffTime = todayStart.getTime()
       return records.filter(record => record.finishedAt >= cutoffTime)
     }
-    case 'this-week': {
-      // 本周：本周一00:00:00至今
+    case 'keep-week': {
+      // 保留本周：显示本周的记录
       const day = now.getDay()
       const diff = day === 0 ? 6 : day - 1 // 周一为起始
       const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff)
       cutoffTime = weekStart.getTime()
       return records.filter(record => record.finishedAt >= cutoffTime)
     }
-    case 'this-month': {
-      // 本月：本月1号00:00:00至今
+    case 'keep-month': {
+      // 保留本月：显示本月的记录
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
       cutoffTime = monthStart.getTime()
       return records.filter(record => record.finishedAt >= cutoffTime)
@@ -70,28 +70,28 @@ function filterByTimeRange(records: ConversationRecord[], filter: TimeRangeFilte
  * 获取时间范围之外的记录（用于批量删除）
  */
 function getRecordsOutsideRange(records: ConversationRecord[], filter: TimeRangeFilter): ConversationRecord[] {
-  if (filter === 'all') return records // 全部时，清除全部
+  if (filter === 'clear-all') return records // 全部清除时删除所有记录
 
   const now = new Date()
   let cutoffTime: number
 
   switch (filter) {
-    case 'today': {
-      // 今天：清除今天之前的记录
+    case 'keep-today': {
+      // 保留今天：清除今天之外的记录
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
       cutoffTime = todayStart.getTime()
       return records.filter(record => record.finishedAt < cutoffTime)
     }
-    case 'this-week': {
-      // 本周：清除本周之前的记录
+    case 'keep-week': {
+      // 保留本周：清除本周之外的记录
       const day = now.getDay()
       const diff = day === 0 ? 6 : day - 1
       const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff)
       cutoffTime = weekStart.getTime()
       return records.filter(record => record.finishedAt < cutoffTime)
     }
-    case 'this-month': {
-      // 本月：清除本月之前的记录
+    case 'keep-month': {
+      // 保留本月：清除本月之外的记录
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
       cutoffTime = monthStart.getTime()
       return records.filter(record => record.finishedAt < cutoffTime)
@@ -160,7 +160,7 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
   const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // 新增状态：时间过滤和批量清除
-  const [timeFilter, setTimeFilter] = useState<TimeRangeFilter>('today')
+  const [timeFilter, setTimeFilter] = useState<TimeRangeFilter>('keep-today')
   const [isClearing, setIsClearing] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
 
@@ -318,39 +318,42 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
             <div className="w-16" /> {/* 占位保持居中 */}
           </div>
 
-          {/* 第二行：时间过滤器 */}
-          <div className="flex items-center gap-1.5 mb-2">
-            {TIME_RANGE_OPTIONS.map(option => (
+          {/* 第二行：时间过滤器、统计信息和批量清除（合并到一行） */}
+          <div className="flex items-center justify-between gap-2">
+            {/* 左侧：时间过滤器 */}
+            <div className="flex items-center gap-1.5">
+              {TIME_RANGE_OPTIONS.map(option => (
+                <button
+                  key={option.value}
+                  onClick={() => setTimeFilter(option.value)}
+                  className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                    timeFilter === option.value
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
+            {/* 右侧：统计 + 清除按钮 */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400 whitespace-nowrap">
+                {filteredStats.count} 条 · {formatBytes(filteredStats.sizeBytes)}
+              </span>
               <button
-                key={option.value}
-                onClick={() => setTimeFilter(option.value)}
-                className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                  timeFilter === option.value
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                onClick={() => setShowClearConfirm(true)}
+                disabled={isClearing || deleteStats.count === 0}
+                className={`px-2 py-1 text-xs rounded-md transition-colors whitespace-nowrap ${
+                  isClearing || deleteStats.count === 0
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-red-50 text-red-600 hover:bg-red-100'
                 }`}
               >
-                {option.label}
+                {isClearing ? '清除中...' : '批量清除'}
               </button>
-            ))}
-          </div>
-
-          {/* 第三行：统计信息和批量清除 */}
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400">
-              {filteredStats.count} 条 · {formatBytes(filteredStats.sizeBytes)}
-            </span>
-            <button
-              onClick={() => setShowClearConfirm(true)}
-              disabled={isClearing || deleteStats.count === 0}
-              className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                isClearing || deleteStats.count === 0
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-red-50 text-red-600 hover:bg-red-100'
-              }`}
-            >
-              {isClearing ? '清除中...' : '批量清除'}
-            </button>
+            </div>
           </div>
 
           {/* 复制提示（全局） */}
@@ -364,12 +367,12 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
           {showClearConfirm && (
             <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
               <p className="text-xs text-amber-700 mb-2">
-                {timeFilter === 'all' ? (
-                  <>确定要删除全部历史记录吗？共 {deleteStats.count} 条，此操作不可恢复。</>
+                {timeFilter === 'clear-all' ? (
+                  <>确定要清除全部历史记录吗？共 {deleteStats.count} 条，此操作不可恢复。</>
                 ) : (
                   <>
-                    确定要清除"{TIME_RANGE_OPTIONS.find(o => o.value === timeFilter)?.label}"之外的历史记录吗？
-                    共 {deleteStats.count} 条，此操作不可恢复。
+                    确定执行"{TIME_RANGE_OPTIONS.find(o => o.value === timeFilter)?.label}"吗？
+                    将清除 {deleteStats.count} 条记录，此操作不可恢复。
                   </>
                 )}
               </p>
@@ -384,7 +387,7 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
                   onClick={handleBulkClear}
                   className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
                 >
-                  确认删除
+                  确认清除
                 </button>
               </div>
             </div>
@@ -412,10 +415,13 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
           <div className="p-8 text-center">
             <div className="text-4xl mb-3">📝</div>
             <p className="text-gray-400 text-sm">
-              {timeFilter === 'all' ? '暂无历史记录' : `${TIME_RANGE_OPTIONS.find(o => o.value === timeFilter)?.label}暂无记录`}
+              {timeFilter === 'clear-all' ? '暂无历史记录' :
+               timeFilter === 'keep-today' ? '今天暂无记录' :
+               timeFilter === 'keep-week' ? '本周暂无记录' :
+               timeFilter === 'keep-month' ? '本月暂无记录' : '暂无记录'}
             </p>
             <p className="text-gray-300 text-xs mt-1">
-              {timeFilter === 'all' ? '开始录音后会自动保存' : '可尝试切换其他时间范围'}
+              {timeFilter === 'clear-all' ? '开始录音后会自动保存' : '可尝试切换其他时间范围'}
             </p>
           </div>
         ) : (
