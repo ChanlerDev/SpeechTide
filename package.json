@@ -1,7 +1,7 @@
 {
   "name": "speechtide",
   "private": false,
-  "version": "1.4.4",
+  "version": "1.5.0",
   "type": "module",
   "main": "dist-electron/main.cjs",
   "description": "SpeechTide - 智能语音转文字应用",
