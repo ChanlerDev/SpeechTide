@@ -301,29 +301,29 @@ function App() {
           {/* 头部状态 */}
           <div className="flex items-center justify-between py-1.5">
             <div className="flex items-center gap-1.5">
-              <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
-                <span className="text-white text-xs">🎙️</span>
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
+                <span className="text-white text-sm">🎙️</span>
               </div>
               <div>
-                <h1 className="text-sm font-semibold text-gray-800">SpeechTide</h1>
+                <h1 className="text-base font-semibold text-gray-800">SpeechTide</h1>
                 <p className="text-xs text-gray-400 truncate max-w-[150px]">{state.message}</p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               {/* 历史记录按钮 */}
               <button
                 onClick={() => setShowHistory(true)}
-                className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-colors"
                 title="历史记录"
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="text-xs">历史</span>
+                <span className="text-sm">历史</span>
               </button>
-              <div className="flex items-center gap-1">
-                <div className={`w-2 h-2 rounded-full ${currentStatus.color}`} />
-                <span className="text-xs text-gray-500">{currentStatus.label}</span>
+              <div className="flex items-center gap-1.5">
+                <div className={`w-2.5 h-2.5 rounded-full ${currentStatus.color}`} />
+                <span className="text-sm text-gray-500">{currentStatus.label}</span>
               </div>
             </div>
           </div>
