@@ -4,18 +4,7 @@
  */
 
 import { memo, useState, useEffect, useCallback, useRef } from 'react'
-
-interface HistoryRecord {
-  id: string
-  startedAt: number
-  finishedAt: number
-  durationMs: number
-  audioPath: string
-  transcript?: string
-  modelId?: string
-  language?: string
-  error?: string
-}
+import type { ConversationRecord } from '../../shared/conversation'
 
 interface HistoryPanelProps {
   onBack: () => void
@@ -60,7 +49,7 @@ function formatDuration(ms: number): string {
  * 历史记录面板
  */
 export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
-  const [records, setRecords] = useState<HistoryRecord[]>([])
+  const [records, setRecords] = useState<ConversationRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -91,7 +80,7 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
   }, [loadHistory])
 
   // 复制文本
-  const handleCopy = async (record: HistoryRecord) => {
+  const handleCopy = async (record: ConversationRecord) => {
     if (!record.transcript) return
     try {
       await navigator.clipboard.writeText(record.transcript)
@@ -107,7 +96,7 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
   }
 
   // 播放音频
-  const handlePlay = async (record: HistoryRecord) => {
+  const handlePlay = async (record: ConversationRecord) => {
     if (playingId === record.id) return
     setPlayingId(record.id)
     try {
@@ -121,7 +110,7 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
   }
 
   // 删除记录
-  const handleDelete = async (record: HistoryRecord) => {
+  const handleDelete = async (record: ConversationRecord) => {
     if (deletingId === record.id) return
     setDeletingId(record.id)
     try {
