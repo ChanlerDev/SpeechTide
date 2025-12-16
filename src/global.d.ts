@@ -1,4 +1,5 @@
 import type { SpeechTideState, ShortcutConfig } from '../shared/app-state'
+import type { ConversationRecord } from '../shared/conversation'
 
 interface TestTranscriptionResult {
   text: string
@@ -89,6 +90,9 @@ declare global {
       playTestAudio: () => Promise<{ success: boolean; error?: string }>
       getHistoryStats: (options?: { maxAgeDays?: number }) => Promise<{ count: number; sizeBytes: number; error?: string }>
       clearHistory: (options?: { maxAgeDays?: number }) => Promise<{ success: boolean; deletedCount?: number; error?: string }>
+      getHistoryList: (options?: { limit?: number; offset?: number }) => Promise<{ records: ConversationRecord[]; error?: string }>
+      deleteHistoryItem: (sessionId: string) => Promise<{ success: boolean; error?: string }>
+      playHistoryAudio: (sessionId: string) => Promise<{ success: boolean; error?: string }>
       onPlayAudio: (callback: (audioPath: string) => void) => () => void
     }
     onboarding: {

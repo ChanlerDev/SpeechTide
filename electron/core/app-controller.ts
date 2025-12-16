@@ -266,6 +266,48 @@ export class AppController {
           return { success: false, error: String(error) }
         }
       },
+      getHistoryList: async (options) => {
+        try {
+          const records = await this.conversationStore.list({
+            limit: options?.limit ?? 50,
+            offset: options?.offset ?? 0,
+            excludeTest: true,
+          })
+          return { records }
+        } catch (error) {
+          logger.error(error instanceof Error ? error : new Error(String(error)), { context: 'getHistoryList' })
+          return { records: [], error: '加载历史记录失败' }
+        }
+      },
+      deleteHistoryItem: async (sessionId) => {
+        try {
+          // 不允许删除当前正在进行的会话
+          if (this.activeRecording?.sessionId === sessionId) {
+            return { success: false, error: '无法删除正在进行的录音' }
+          }
+          const success = await this.conversationStore.delete(sessionId)
+          return { success }
+        } catch (error) {
+          logger.error(error instanceof Error ? error : new Error(String(error)), { context: 'deleteHistoryItem', sessionId })
+          return { success: false, error: String(error) }
+        }
+      },
+      playHistoryAudio: async (sessionId) => {
+        try {
+          const record = await this.conversationStore.get(sessionId)
+          if (!record) {
+            return { success: false, error: '记录不存在' }
+          }
+          if (!record.audioPath || !fs.existsSync(record.audioPath)) {
+            return { success: false, error: '音频文件不存在' }
+          }
+          this.windowService?.send('speech:play-audio', record.audioPath)
+          return { success: true }
+        } catch (error) {
+          logger.error(error instanceof Error ? error : new Error(String(error)), { context: 'playHistoryAudio', sessionId })
+          return { success: false, error: String(error) }
+        }
+      },
     })
   }
 

@@ -6,6 +6,7 @@
 
 import { ipcMain } from 'electron'
 import type { ShortcutConfig, SpeechTideState } from '../../shared/app-state'
+import type { ConversationRecord } from '../../shared/conversation'
 import { loadAppSettings } from '../config'
 
 export interface IPCHandlers {
@@ -43,6 +44,10 @@ export interface IPCHandlers {
   playTestAudio: () => Promise<{ success: boolean; error?: string }>
   getHistoryStats: (options: { maxAgeDays?: number }) => Promise<{ count: number; sizeBytes: number; error?: string }>
   clearHistory: (options: { maxAgeDays?: number }) => Promise<{ success: boolean; deletedCount?: number; error?: string }>
+  // 历史记录列表相关
+  getHistoryList: (options?: { limit?: number; offset?: number }) => Promise<{ records: ConversationRecord[]; error?: string }>
+  deleteHistoryItem: (sessionId: string) => Promise<{ success: boolean; error?: string }>
+  playHistoryAudio: (sessionId: string) => Promise<{ success: boolean; error?: string }>
 }
 
 /**
@@ -130,6 +135,21 @@ export class IPCListeners {
       return this.handlers?.clearHistory(options)
     })
 
+    // 获取历史记录列表
+    ipcMain.handle('speech:get-history-list', async (_event, options?: { limit?: number; offset?: number }) => {
+      return this.handlers?.getHistoryList(options)
+    })
+
+    // 删除单条历史记录
+    ipcMain.handle('speech:delete-history-item', async (_event, sessionId: string) => {
+      return this.handlers?.deleteHistoryItem(sessionId)
+    })
+
+    // 播放历史录音
+    ipcMain.handle('speech:play-history-audio', async (_event, sessionId: string) => {
+      return this.handlers?.playHistoryAudio(sessionId)
+    })
+
     this.registered = true
     console.log('[IPCListeners] ✓ IPC 处理器注册完成')
   }
@@ -153,6 +173,9 @@ export class IPCListeners {
     ipcMain.removeHandler('speech:set-shortcut-recording')
     ipcMain.removeHandler('speech:get-history-stats')
     ipcMain.removeHandler('speech:clear-history')
+    ipcMain.removeHandler('speech:get-history-list')
+    ipcMain.removeHandler('speech:delete-history-item')
+    ipcMain.removeHandler('speech:play-history-audio')
 
     this.handlers = null
     this.registered = false

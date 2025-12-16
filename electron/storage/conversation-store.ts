@@ -17,8 +17,116 @@ function isExpectedMetaError(error: unknown): boolean {
   return false
 }
 
+export interface ListOptions {
+  limit?: number
+  offset?: number
+  excludeTest?: boolean
+}
+
 export class ConversationStore {
   constructor(private readonly baseDir: string) {}
+
+  /**
+   * 获取历史记录列表
+   * @param options 分页和过滤选项
+   * @returns 按时间倒序排列的会话记录列表
+   */
+  async list(options: ListOptions = {}): Promise<ConversationRecord[]> {
+    const { limit = 50, offset = 0, excludeTest = true } = options
+    const records: ConversationRecord[] = []
+
+    try {
+      const entries = await fs.readdir(this.baseDir, { withFileTypes: true })
+
+      // 读取所有有效的会话记录
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue
+        if (!UUID_PATTERN.test(entry.name)) continue
+
+        try {
+          const metaPath = path.join(this.baseDir, entry.name, 'meta.json')
+          const metaContent = await fs.readFile(metaPath, 'utf-8')
+          const meta = JSON.parse(metaContent) as ConversationRecord
+
+          // 过滤测试记录
+          if (excludeTest && meta.test) continue
+
+          records.push(meta)
+        } catch (error) {
+          // 跳过无法读取的记录
+          if (!isExpectedMetaError(error)) {
+            logger.warn('读取会话元数据失败', {
+              sessionId: entry.name,
+              error: error instanceof Error ? error.message : String(error),
+            })
+          }
+        }
+      }
+
+      // 按 finishedAt 倒序排列（最新的在前）
+      records.sort((a, b) => (b.finishedAt || b.startedAt) - (a.finishedAt || a.startedAt))
+
+      // 应用分页
+      return records.slice(offset, offset + limit)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return []
+      }
+      throw error
+    }
+  }
+
+  /**
+   * 根据 ID 获取单个会话记录
+   * @param sessionId 会话 ID
+   * @returns 会话记录，不存在则返回 null
+   */
+  async get(sessionId: string): Promise<ConversationRecord | null> {
+    // 验证 ID 格式
+    if (!UUID_PATTERN.test(sessionId)) {
+      return null
+    }
+
+    try {
+      const metaPath = path.join(this.baseDir, sessionId, 'meta.json')
+      const metaContent = await fs.readFile(metaPath, 'utf-8')
+      return JSON.parse(metaContent) as ConversationRecord
+    } catch (error) {
+      if (isExpectedMetaError(error)) {
+        return null
+      }
+      throw error
+    }
+  }
+
+  /**
+   * 删除单个会话记录
+   * @param sessionId 会话 ID
+   * @returns 是否删除成功
+   */
+  async delete(sessionId: string): Promise<boolean> {
+    // 验证 ID 格式，防止路径遍历
+    if (!UUID_PATTERN.test(sessionId)) {
+      logger.warn('删除失败：无效的会话 ID 格式', { sessionId })
+      return false
+    }
+
+    try {
+      const sessionDir = path.join(this.baseDir, sessionId)
+      await fs.rm(sessionDir, { recursive: true, force: true })
+      logger.info('会话已删除', { sessionId })
+      return true
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return false
+      }
+      logger.error(error instanceof Error ? error : new Error(String(error)), {
+        context: 'delete',
+        sessionId,
+      })
+      throw error
+    }
+  }
 
   async save(record: ConversationRecord) {
     // 输入验证
