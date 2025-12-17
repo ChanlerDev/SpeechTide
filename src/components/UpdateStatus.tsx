@@ -66,13 +66,26 @@ export const UpdateStatus = memo(() => {
     return `${bytesPerSecond} B/s`
   }
 
+  // 检测是否为 beta 版本
+  const isBetaVersion = (version?: string) => version?.includes('-beta') || false
+
+  // Beta 标识组件
+  const BetaBadge = () => (
+    <span className="ml-1 px-1 py-0.5 text-[10px] bg-orange-500 text-white rounded font-medium">
+      BETA
+    </span>
+  )
+
   return (
     <div className="flex items-center justify-between text-xs text-gray-400 px-1 py-2 border-t border-gray-100">
       <div className="flex items-center gap-2 flex-1 min-w-0">
         {/* 空闲 */}
         {status === 'idle' && (
           <>
-            <span className="text-gray-500">v{currentVersion}</span>
+            <span className="text-gray-500 flex items-center">
+              v{currentVersion}
+              {isBetaVersion(currentVersion) && <BetaBadge />}
+            </span>
             <button
               onClick={handleCheck}
               className="text-blue-500 hover:text-blue-600"
@@ -85,7 +98,10 @@ export const UpdateStatus = memo(() => {
         {/* 检查中 */}
         {status === 'checking' && (
           <>
-            <span className="text-gray-500">v{currentVersion}</span>
+            <span className="text-gray-500 flex items-center">
+              v{currentVersion}
+              {isBetaVersion(currentVersion) && <BetaBadge />}
+            </span>
             <span className="flex items-center gap-1 text-blue-500">
               <span className="animate-spin w-3 h-3 border border-blue-500 border-t-transparent rounded-full" />
               检查中...
@@ -96,7 +112,10 @@ export const UpdateStatus = memo(() => {
         {/* 已是最新 */}
         {status === 'not-available' && (
           <>
-            <span className="text-gray-500">v{currentVersion}</span>
+            <span className="text-gray-500 flex items-center">
+              v{currentVersion}
+              {isBetaVersion(currentVersion) && <BetaBadge />}
+            </span>
             <span className="text-green-500">✓ 已是最新</span>
             <button
               onClick={handleCheck}
@@ -110,9 +129,15 @@ export const UpdateStatus = memo(() => {
         {/* 有可用更新 */}
         {status === 'available' && (
           <>
-            <span className="text-gray-500">v{currentVersion}</span>
+            <span className="text-gray-500 flex items-center">
+              v{currentVersion}
+              {isBetaVersion(currentVersion) && <BetaBadge />}
+            </span>
             <span className="text-gray-400">→</span>
-            <span className="text-green-600 font-medium">v{availableVersion}</span>
+            <span className="text-green-600 font-medium flex items-center">
+              v{availableVersion}
+              {isBetaVersion(availableVersion) && <BetaBadge />}
+            </span>
             <button
               onClick={handleDownload}
               className="px-2 py-0.5 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
@@ -139,7 +164,10 @@ export const UpdateStatus = memo(() => {
         {/* 下载完成 */}
         {status === 'downloaded' && (
           <>
-            <span className="text-green-600">v{availableVersion} 已就绪</span>
+            <span className="text-green-600 flex items-center">
+              v{availableVersion} 已就绪
+              {isBetaVersion(availableVersion) && <BetaBadge />}
+            </span>
             <button
               onClick={handleInstall}
               className="px-2 py-0.5 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
@@ -160,7 +188,10 @@ export const UpdateStatus = memo(() => {
         {/* 错误 */}
         {status === 'error' && (
           <>
-            <span className="text-gray-500">v{currentVersion}</span>
+            <span className="text-gray-500 flex items-center">
+              v{currentVersion}
+              {isBetaVersion(currentVersion) && <BetaBadge />}
+            </span>
             <span className="text-red-500 truncate max-w-[120px]" title={state.error}>
               更新失败
             </span>

@@ -101,6 +101,9 @@ export class AppController {
     this.registerNativeRecordingIPC()
     this.setupStateListeners()
 
+    // 应用 beta 更新设置
+    updateService.setAllowBetaUpdates(this.settings.allowBetaUpdates)
+
     this.initialized = true
     metrics.endTimer(initTimer, 'model_load', { stage: 'app_init' })
     logger.info('初始化完成')
@@ -221,6 +224,11 @@ export class AppController {
             if (this.transcriber) {
               this.scheduleTranscriberUnload()
             }
+          }
+
+          // 如果 beta 更新设置变更，更新 UpdateService
+          if (settings.allowBetaUpdates !== undefined) {
+            updateService.setAllowBetaUpdates(settings.allowBetaUpdates)
           }
 
           return { success: true }
