@@ -52,8 +52,6 @@ export const AppSettings = memo<AppSettingsProps>(({
   onUpdateAllowBetaUpdates,
   onRefreshAppleScriptPermission,
 }) => {
-  const [showConfirm, setShowConfirm] = useState(false)
-  const [selectedAge, setSelectedAge] = useState(7)
   const [showBetaWarning, setShowBetaWarning] = useState(false)
 
   const handleToggleClipboard = useCallback(() => {
