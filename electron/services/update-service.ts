@@ -135,6 +135,14 @@ export class UpdateService {
   }
 
   /**
+   * 设置是否允许接收测试版更新
+   */
+  setAllowBetaUpdates(allow: boolean): void {
+    this.autoUpdater.allowPrerelease = allow
+    logger.info('测试版更新设置已更新', { allowBetaUpdates: allow })
+  }
+
+  /**
    * 配置 autoUpdater
    */
   private configureAutoUpdater(): void {
@@ -144,6 +152,8 @@ export class UpdateService {
     this.autoUpdater.autoInstallOnAppQuit = false
     // 不允许降级
     this.autoUpdater.allowDowngrade = false
+    // 默认不接收预发布版本（beta），需要用户手动开启
+    this.autoUpdater.allowPrerelease = false
 
     // 注册事件监听
     this.autoUpdater.on('checking-for-update', () => {

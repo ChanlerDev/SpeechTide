@@ -57,6 +57,7 @@ interface AppSettingsProps {
   clipboardMode: boolean
   autoShowOnStart: boolean
   cacheTTLMinutes: number
+  allowBetaUpdates: boolean
   appleScriptPermission: AppleScriptPermission | null
   historyStats: HistoryStats | null
   isClearing: boolean
@@ -64,6 +65,7 @@ interface AppSettingsProps {
   onUpdateClipboardMode: (value: boolean) => Promise<void>
   onUpdateAutoShowOnStart: (value: boolean) => Promise<void>
   onUpdateCacheTTL: (value: number) => Promise<void>
+  onUpdateAllowBetaUpdates: (value: boolean) => Promise<void>
   onRefreshAppleScriptPermission: () => Promise<void>
   onClearHistory: (maxAgeDays: number) => Promise<void>
   onRefreshHistoryStats: (maxAgeDays: number) => Promise<void>
@@ -76,6 +78,7 @@ export const AppSettings = memo<AppSettingsProps>(({
   clipboardMode,
   autoShowOnStart,
   cacheTTLMinutes,
+  allowBetaUpdates,
   appleScriptPermission,
   historyStats,
   isClearing,
@@ -83,6 +86,7 @@ export const AppSettings = memo<AppSettingsProps>(({
   onUpdateClipboardMode,
   onUpdateAutoShowOnStart,
   onUpdateCacheTTL,
+  onUpdateAllowBetaUpdates,
   onRefreshAppleScriptPermission,
   onClearHistory,
   onRefreshHistoryStats,
@@ -97,6 +101,10 @@ export const AppSettings = memo<AppSettingsProps>(({
   const handleToggleAutoShow = useCallback(() => {
     onUpdateAutoShowOnStart(!autoShowOnStart)
   }, [autoShowOnStart, onUpdateAutoShowOnStart])
+
+  const handleToggleBeta = useCallback(() => {
+    onUpdateAllowBetaUpdates(!allowBetaUpdates)
+  }, [allowBetaUpdates, onUpdateAllowBetaUpdates])
 
   const handleCacheTTLChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     onUpdateCacheTTL(Number(e.target.value))
@@ -133,6 +141,7 @@ export const AppSettings = memo<AppSettingsProps>(({
       <div className="mt-2 divide-y divide-gray-50">
         <Toggle enabled={clipboardMode} onToggle={handleToggleClipboard} label="禁用自动插入" />
         <Toggle enabled={autoShowOnStart} onToggle={handleToggleAutoShow} label="启动时显示面板" />
+        <Toggle enabled={allowBetaUpdates} onToggle={handleToggleBeta} label="接收测试版更新" />
         <div className="flex items-center justify-between py-1.5">
           <span className="text-xs text-gray-600">模型缓存时间</span>
           <select
