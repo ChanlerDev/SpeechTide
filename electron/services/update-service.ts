@@ -94,8 +94,8 @@ export class UpdateService {
         const zipPath = path.join(pendingPath, zipFile)
 
         if (fs.existsSync(zipPath)) {
-          // 从文件名提取版本号，如 SpeechTide-1.3.10-mac-arm64.zip
-          const match = zipFile.match(/SpeechTide-([0-9.]+)-/)
+          // 从文件名提取版本号，如 SpeechTide-1.3.10-mac-arm64.zip 或 SpeechTide-1.5.1-beta.0-mac-arm64.zip
+          const match = zipFile.match(/SpeechTide-([0-9.]+(?:-beta\.[0-9]+)?)-/)
           const version = match ? match[1] : 'unknown'
 
           this.state = {
@@ -135,6 +135,14 @@ export class UpdateService {
   }
 
   /**
+   * 设置是否允许接收测试版更新
+   */
+  setAllowBetaUpdates(allow: boolean): void {
+    this.autoUpdater.allowPrerelease = allow
+    logger.info('测试版更新设置已更新', { allowBetaUpdates: allow })
+  }
+
+  /**
    * 配置 autoUpdater
    */
   private configureAutoUpdater(): void {
@@ -144,6 +152,8 @@ export class UpdateService {
     this.autoUpdater.autoInstallOnAppQuit = false
     // 不允许降级
     this.autoUpdater.allowDowngrade = false
+    // 默认不接收预发布版本（beta），需要用户手动开启
+    this.autoUpdater.allowPrerelease = false
 
     // 注册事件监听
     this.autoUpdater.on('checking-for-update', () => {

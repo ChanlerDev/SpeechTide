@@ -84,8 +84,8 @@ declare global {
       testTranscription: () => Promise<{ success: boolean; data?: TestTranscriptionResult; error?: string }>
       updateShortcut: (shortcut: ShortcutConfig) => Promise<{ success: boolean; error?: string }>
       setShortcutRecording: (recording: boolean) => Promise<void>
-      getSettings: () => Promise<{ shortcut: ShortcutConfig; autoInsertText: boolean; clipboardMode: boolean; notificationEnabled: boolean; autoShowOnStart: boolean; cacheTTLMinutes: number }>
-      updateSettings: (settings: Partial<{ autoInsertText: boolean; clipboardMode: boolean; notificationEnabled: boolean; autoShowOnStart: boolean; cacheTTLMinutes: number }>) => Promise<{ success: boolean; error?: string }>
+      getSettings: () => Promise<{ shortcut: ShortcutConfig; autoInsertText: boolean; clipboardMode: boolean; notificationEnabled: boolean; autoShowOnStart: boolean; cacheTTLMinutes: number; allowBetaUpdates: boolean }>
+      updateSettings: (settings: Partial<{ autoInsertText: boolean; clipboardMode: boolean; notificationEnabled: boolean; autoShowOnStart: boolean; cacheTTLMinutes: number; allowBetaUpdates: boolean }>) => Promise<{ success: boolean; error?: string }>
       checkAppleScriptPermission: () => Promise<{ available: boolean; hasPermission: boolean; message: string; guide?: string }>
       playTestAudio: () => Promise<{ success: boolean; error?: string }>
       getHistoryStats: (options?: { maxAgeDays?: number }) => Promise<{ count: number; sizeBytes: number; error?: string }>

@@ -179,15 +179,17 @@ export class TrayService {
 
     // 有更新时显示更新菜单项
     if (updateInfo?.available && updateInfo.version) {
+      const isBeta = updateInfo.version.includes('-beta')
+      const betaTag = isBeta ? ' (BETA)' : ''
       let label: string
       if (updateInfo.installing) {
-        label = `⏳ 正在安装 v${updateInfo.version}...`
+        label = `⏳ 正在安装 v${updateInfo.version}${betaTag}...`
       } else if (updateInfo.downloading) {
-        label = `⬇️ 正在下载 v${updateInfo.version}...`
+        label = `⬇️ 正在下载 v${updateInfo.version}${betaTag}...`
       } else if (updateInfo.downloaded) {
-        label = `✅ v${updateInfo.version} 已就绪，点击安装`
+        label = `✅ v${updateInfo.version}${betaTag} 已就绪，点击安装`
       } else {
-        label = `🔄 有新版本 v${updateInfo.version} 可用`
+        label = `🔄 有新版本 v${updateInfo.version}${betaTag} 可用`
       }
 
       menuItems.push({

@@ -65,6 +65,7 @@ function App() {
   const [clipboardMode, setClipboardMode] = useState(false)
   const [autoShowOnStart, setAutoShowOnStart] = useState(false)
   const [cacheTTLMinutes, setCacheTTLMinutes] = useState(30)
+  const [allowBetaUpdates, setAllowBetaUpdates] = useState(false)
   const [appleScriptPermission, setAppleScriptPermission] = useState<{
     available: boolean
     hasPermission: boolean
@@ -99,6 +100,7 @@ function App() {
       setAutoShowOnStart(s.autoShowOnStart)
       // 兜底处理：防止配置缺字段或损坏
       setCacheTTLMinutes(Number.isFinite(s.cacheTTLMinutes) ? s.cacheTTLMinutes : 30)
+      setAllowBetaUpdates(s.allowBetaUpdates ?? false)
     })
 
     // 检查 AppleScript 权限
@@ -233,6 +235,15 @@ function App() {
     }
   }
 
+  const updateAllowBetaUpdates = async (value: boolean) => {
+    setAllowBetaUpdates(value)
+    try {
+      await window.speech.updateSettings({ allowBetaUpdates: value })
+    } catch (err) {
+      console.error('更新测试版更新设置失败:', err)
+    }
+  }
+
   const runTest = async () => {
     if (testRunning) return
     setTestRunning(true)
@@ -363,10 +374,12 @@ function App() {
             clipboardMode={clipboardMode}
             autoShowOnStart={autoShowOnStart}
             cacheTTLMinutes={cacheTTLMinutes}
+            allowBetaUpdates={allowBetaUpdates}
             appleScriptPermission={appleScriptPermission}
             onUpdateClipboardMode={updateClipboardMode}
             onUpdateAutoShowOnStart={updateAutoShowOnStart}
             onUpdateCacheTTL={updateCacheTTL}
+            onUpdateAllowBetaUpdates={updateAllowBetaUpdates}
             onRefreshAppleScriptPermission={refreshAppleScriptPermission}
           />
 

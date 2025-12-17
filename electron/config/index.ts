@@ -174,6 +174,8 @@ export interface AppSettings {
   autoShowOnStart: boolean
   /** 模型缓存 TTL（分钟），0 表示永不过期 */
   cacheTTLMinutes: number
+  /** 是否接收测试版更新（beta 版本） */
+  allowBetaUpdates: boolean
 }
 
 export function loadAppSettings(): AppSettings {
@@ -184,6 +186,7 @@ export function loadAppSettings(): AppSettings {
     notificationEnabled: true,
     autoShowOnStart: false,
     cacheTTLMinutes: 30, // 默认 30 分钟
+    allowBetaUpdates: false, // 默认不接收测试版
   }
   return loadJsonFile<AppSettings>('settings.json', defaults)
 }

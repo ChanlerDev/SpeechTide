@@ -23,6 +23,7 @@ export interface IPCHandlers {
     notificationEnabled: boolean
     autoShowOnStart: boolean
     cacheTTLMinutes: number
+    allowBetaUpdates: boolean
   }>) => Promise<{ success: boolean; error?: string }>
   checkAppleScriptPermission: () => Promise<{
     available: boolean
