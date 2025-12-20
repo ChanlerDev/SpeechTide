@@ -158,6 +158,7 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
   const [playingId, setPlayingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const playTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // 新增状态：时间过滤和批量清除
   const [timeFilter, setTimeFilter] = useState<TimeRangeFilter>('keep-today')
@@ -207,6 +208,9 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
       if (copyTimeoutRef.current) {
         clearTimeout(copyTimeoutRef.current)
       }
+      if (playTimeoutRef.current) {
+        clearTimeout(playTimeoutRef.current)
+      }
     }
   }, [])
 
@@ -229,6 +233,12 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
   // 播放音频
   const handlePlay = async (record: ConversationRecord) => {
     if (playingId === record.id) return
+
+    // 清除之前的播放超时
+    if (playTimeoutRef.current) {
+      clearTimeout(playTimeoutRef.current)
+    }
+
     setPlayingId(record.id)
     try {
       await window.speech.playHistoryAudio(record.id)
@@ -237,7 +247,7 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
     } finally {
       // 根据音频实际时长设置状态重置时间
       const resetDelay = Math.max(1000, record.durationMs)
-      setTimeout(() => setPlayingId(null), resetDelay)
+      playTimeoutRef.current = setTimeout(() => setPlayingId(null), resetDelay)
     }
   }
 
@@ -412,10 +422,10 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
           <div className="p-8 text-center">
             <div className="text-4xl mb-3">📝</div>
             <p className="text-gray-400 text-sm">
-              {timeFilter === 'clear-all' ? '暂无历史记录' :
-               timeFilter === 'keep-today' ? '今天暂无记录' :
+              {timeFilter === 'keep-today' ? '今天暂无记录' :
                timeFilter === 'keep-week' ? '本周暂无记录' :
-               timeFilter === 'keep-month' ? '本月暂无记录' : '暂无记录'}
+               timeFilter === 'keep-month' ? '本月暂无记录' :
+               timeFilter === 'clear-all' ? '暂无历史记录' : '暂无记录'}
             </p>
             <p className="text-gray-300 text-xs mt-1">
               {timeFilter === 'clear-all' ? '开始录音后会自动保存' : '可尝试切换其他时间范围'}
