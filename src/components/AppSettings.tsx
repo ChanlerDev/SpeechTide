@@ -104,12 +104,11 @@ export const AppSettings = memo<AppSettingsProps>(({
           <div className="flex items-center justify-between py-1.5">
             <div className="flex items-center gap-1">
               <span className="text-xs text-gray-600">接收测试版更新</span>
-              <span
-                className="text-[10px] text-gray-400 cursor-help"
-                title="测试版可能包含未完善的功能和已知问题，仅推荐开发者使用"
-                role="tooltip"
-              >
-                ⓘ
+              <span className="relative group">
+                <span className="text-[10px] text-gray-400 cursor-help">ⓘ</span>
+                <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-[10px] text-white bg-gray-800 rounded whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
+                  测试版可能包含未完善的功能，仅推荐开发者使用
+                </span>
               </span>
             </div>
             <button
