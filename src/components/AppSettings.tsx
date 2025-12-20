@@ -83,7 +83,7 @@ export const AppSettings = memo<AppSettingsProps>(({
 
   const Toggle = ({ enabled, onToggle, label }: { enabled: boolean; onToggle: () => void; label: string }) => (
     <div className="flex items-center justify-between py-1.5">
-      <span className="text-xs text-gray-600">{label}</span>
+      <span className="text-sm text-gray-600">{label}</span>
       <button
         onClick={onToggle}
         className={`relative w-9 h-5 rounded-full transition-colors ${enabled ? 'bg-blue-500' : 'bg-gray-200'}`}
@@ -95,7 +95,7 @@ export const AppSettings = memo<AppSettingsProps>(({
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
-      <span className="text-xs font-medium text-gray-600">设置</span>
+      <span className="text-sm font-medium text-gray-700">设置</span>
 
       <div className="mt-2 space-y-2">
         <div className="divide-y divide-gray-50">
@@ -103,10 +103,10 @@ export const AppSettings = memo<AppSettingsProps>(({
           <Toggle enabled={autoShowOnStart} onToggle={handleToggleAutoShow} label="启动时显示面板" />
           <div className="flex items-center justify-between py-1.5">
             <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-600">接收测试版更新</span>
+              <span className="text-sm text-gray-600">接收测试版更新</span>
               <span className="relative group">
-                <span className="text-[10px] text-gray-400 cursor-help">ⓘ</span>
-                <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-[10px] text-white bg-gray-800 rounded whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
+                <span className="text-xs text-gray-400 cursor-help">ⓘ</span>
+                <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
                   测试版可能包含未完善的功能，仅推荐开发者使用
                 </span>
               </span>
@@ -123,20 +123,20 @@ export const AppSettings = memo<AppSettingsProps>(({
         {/* Beta 更新警告对话框 - 紧跟在开关下方 */}
         {showBetaWarning && (
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <p className="text-xs font-medium text-amber-800 mb-1">⚠️ 测试版更新说明</p>
-            <p className="text-xs text-amber-700 mb-2">
+            <p className="text-sm font-medium text-amber-800 mb-1">⚠️ 测试版更新说明</p>
+            <p className="text-xs text-gray-400 mb-2">
               测试版可能包含未完善的功能和已知问题，可能影响使用稳定性。建议仅在需要体验最新特性时启用。
             </p>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowBetaWarning(false)}
-                className="px-2 py-1 text-xs bg-white border border-gray-200 rounded hover:bg-gray-50"
+                className="px-2 py-1 text-sm bg-white border border-gray-200 rounded hover:bg-gray-50"
               >
                 取消
               </button>
               <button
                 onClick={handleConfirmEnableBeta}
-                className="px-2 py-1 text-xs bg-amber-500 text-white rounded hover:bg-amber-600"
+                className="px-2 py-1 text-sm bg-amber-500 text-white rounded hover:bg-amber-600"
               >
                 我知道了，启用
               </button>
@@ -146,11 +146,11 @@ export const AppSettings = memo<AppSettingsProps>(({
 
         <div className="divide-y divide-gray-50">
           <div className="flex items-center justify-between py-1.5">
-            <span className="text-xs text-gray-600">模型缓存时间</span>
+            <span className="text-sm text-gray-600">模型缓存时间</span>
             <select
               value={cacheTTLMinutes}
               onChange={handleCacheTTLChange}
-              className="text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="text-sm bg-gray-50 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
             >
               {CACHE_TTL_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -165,8 +165,8 @@ export const AppSettings = memo<AppSettingsProps>(({
       {appleScriptPermission && (
         <div className="mt-3 pt-2 border-t border-gray-100">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500">辅助功能</span>
-            <div className={`flex items-center gap-1 text-xs ${appleScriptPermission.hasPermission ? 'text-green-600' : 'text-amber-600'}`}>
+            <span className="text-xs text-gray-400">辅助功能</span>
+            <div className={`flex items-center gap-1 text-sm ${appleScriptPermission.hasPermission ? 'text-green-600' : 'text-amber-600'}`}>
               <span>{appleScriptPermission.hasPermission ? '✓' : '⚠'}</span>
               <button onClick={onRefreshAppleScriptPermission} className="hover:underline">
                 {appleScriptPermission.hasPermission ? '正常' : '检查'}

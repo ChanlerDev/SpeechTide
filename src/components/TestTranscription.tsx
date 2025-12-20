@@ -58,19 +58,19 @@ export const TestTranscription = ({
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium text-gray-600">测试转录</span>
+        <span className="text-sm font-medium text-gray-700">测试转录</span>
         <div className="flex items-center gap-1.5">
           <button
             onClick={onPlayTestAudio}
             disabled={isPlaying}
-            className="text-xs px-2 py-1 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50 transition-colors"
+            className="text-sm px-2 py-1 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50 transition-colors"
           >
             {isPlaying ? '播放中...' : '▶ 试听'}
           </button>
           <button
             onClick={onRunTest}
             disabled={isDisabled}
-            className="text-xs px-2 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
+            className="text-sm px-2 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
           >
             {testRunning ? '转录中...' : '开始测试'}
           </button>
@@ -88,7 +88,7 @@ export const TestTranscription = ({
             </div>
             <button
               onClick={onCopyTestResult}
-              className={`text-xs px-1.5 py-0.5 rounded transition-colors ${
+              className={`text-sm px-1.5 py-0.5 rounded transition-colors ${
                 testCopySuccess ? 'text-green-600' : 'text-blue-600 hover:bg-blue-50'
               }`}
             >
@@ -96,14 +96,14 @@ export const TestTranscription = ({
             </button>
           </div>
           <div className="bg-gray-50 rounded-lg p-2 max-h-[80px] overflow-y-auto">
-            <p className="text-gray-700 text-sm leading-relaxed">
+            <p className="text-sm text-gray-600 leading-relaxed">
               {testResult.text || '无结果'}
             </p>
           </div>
         </div>
       ) : (
         <div className="bg-gray-50 rounded-lg p-3 text-center">
-          <p className="text-gray-300 text-xs">点击测试验证模型</p>
+          <p className="text-xs text-gray-400">点击测试验证模型</p>
         </div>
       )}
     </div>

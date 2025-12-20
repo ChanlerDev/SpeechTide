@@ -330,11 +330,11 @@ function App() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="text-sm">历史</span>
+                <span className="text-sm text-gray-600">历史</span>
               </button>
               <div className="flex items-center gap-1.5">
                 <div className={`w-2.5 h-2.5 rounded-full ${currentStatus.color}`} />
-                <span className="text-sm text-gray-500">{currentStatus.label}</span>
+                <span className="text-sm text-gray-600">{currentStatus.label}</span>
               </div>
             </div>
           </div>

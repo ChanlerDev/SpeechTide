@@ -22,15 +22,15 @@ export const TranscriptionCard = memo<TranscriptionCardProps>(({
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-50">
-        <span className="text-xs font-medium text-gray-600">转录结果</span>
+        <span className="text-sm font-medium text-gray-700">转录结果</span>
         <button
           onClick={onCopy}
           disabled={!transcript}
-          className={`text-xs px-2 py-1 rounded-md transition-colors ${
-            copySuccess 
-              ? 'text-green-600 bg-green-50' 
-              : transcript 
-                ? 'text-blue-600 hover:bg-blue-50' 
+          className={`text-sm px-2 py-1 rounded-md transition-colors ${
+            copySuccess
+              ? 'text-green-600 bg-green-50'
+              : transcript
+                ? 'text-blue-600 hover:bg-blue-50'
                 : 'text-gray-300 cursor-not-allowed'
           }`}
         >
@@ -39,11 +39,11 @@ export const TranscriptionCard = memo<TranscriptionCardProps>(({
       </div>
       <div className="p-3 min-h-[60px] max-h-[100px] overflow-y-auto">
         {transcript ? (
-          <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap break-words">
+          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap break-words">
             {transcript}
           </p>
         ) : (
-          <p className="text-gray-300 text-sm text-center py-2">等待录音...</p>
+          <p className="text-xs text-gray-400 text-center py-2">等待录音...</p>
         )}
       </div>
     </div>
