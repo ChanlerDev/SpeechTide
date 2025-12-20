@@ -322,9 +322,9 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              <span className="text-xs">返回</span>
+              <span className="text-xs text-gray-600">返回</span>
             </button>
-            <h2 className="text-sm font-semibold text-gray-800">历史记录</h2>
+            <h2 className="text-sm font-medium text-gray-700">历史记录</h2>
             <div className="w-16" /> {/* 占位保持居中 */}
           </div>
 
@@ -373,7 +373,7 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
           {/* 清除确认对话框 */}
           {showClearConfirm && (
             <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-xs text-amber-700 mb-2">
+              <p className="text-xs text-gray-400 mb-2">
                 {timeFilter === 'clear-all' ? (
                   <>确定要清除全部历史记录吗？共 {deleteStats.count} 条，此操作不可恢复。</>
                 ) : (
@@ -410,7 +410,7 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
           </div>
         ) : error ? (
           <div className="p-4 text-center">
-            <p className="text-red-500 text-sm">{error}</p>
+            <p className="text-xs text-red-500">{error}</p>
             <button
               onClick={loadHistory}
               className="mt-2 text-xs text-blue-600 hover:underline"
@@ -421,13 +421,13 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
         ) : filteredRecords.length === 0 ? (
           <div className="p-8 text-center">
             <div className="text-4xl mb-3">📝</div>
-            <p className="text-gray-400 text-sm">
+            <p className="text-xs text-gray-400">
               {timeFilter === 'keep-today' ? '今天暂无记录' :
                timeFilter === 'keep-week' ? '本周暂无记录' :
                timeFilter === 'keep-month' ? '本月暂无记录' :
                timeFilter === 'clear-all' ? '暂无历史记录' : '暂无记录'}
             </p>
-            <p className="text-gray-300 text-xs mt-1">
+            <p className="text-xs text-gray-400 mt-1">
               {timeFilter === 'clear-all' ? '开始录音后会自动保存' : '可尝试切换其他时间范围'}
             </p>
           </div>
@@ -505,13 +505,13 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
                 {/* 转录文本 */}
                 <div className="min-h-[36px]">
                   {record.error ? (
-                    <p className="text-red-400 text-sm">转写失败: {record.error}</p>
+                    <p className="text-xs text-red-400">转写失败: {record.error}</p>
                   ) : record.transcript ? (
-                    <p className="text-gray-700 text-sm leading-relaxed line-clamp-3">
+                    <p className="text-xs text-gray-600 leading-relaxed line-clamp-3">
                       {record.transcript}
                     </p>
                   ) : (
-                    <p className="text-gray-300 text-sm">无转录内容</p>
+                    <p className="text-xs text-gray-400">无转录内容</p>
                   )}
                 </div>
               </div>

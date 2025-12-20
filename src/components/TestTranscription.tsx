@@ -63,14 +63,14 @@ export const TestTranscription = ({
           <button
             onClick={onPlayTestAudio}
             disabled={isPlaying}
-            className="text-sm px-2 py-1 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50 transition-colors"
+            className="text-xs px-2 py-1 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50 transition-colors"
           >
             {isPlaying ? '播放中...' : '▶ 试听'}
           </button>
           <button
             onClick={onRunTest}
             disabled={isDisabled}
-            className="text-sm px-2 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
+            className="text-xs px-2 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
           >
             {testRunning ? '转录中...' : '开始测试'}
           </button>
@@ -88,7 +88,7 @@ export const TestTranscription = ({
             </div>
             <button
               onClick={onCopyTestResult}
-              className={`text-sm px-1.5 py-0.5 rounded transition-colors ${
+              className={`text-xs px-1.5 py-0.5 rounded transition-colors ${
                 testCopySuccess ? 'text-green-600' : 'text-blue-600 hover:bg-blue-50'
               }`}
             >
@@ -96,7 +96,7 @@ export const TestTranscription = ({
             </button>
           </div>
           <div className="bg-gray-50 rounded-lg p-2 max-h-[80px] overflow-y-auto">
-            <p className="text-sm text-gray-600 leading-relaxed">
+            <p className="text-xs text-gray-600 leading-relaxed">
               {testResult.text || '无结果'}
             </p>
           </div>

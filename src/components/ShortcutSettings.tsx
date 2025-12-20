@@ -133,7 +133,7 @@ export const ShortcutSettings = ({
           onKeyUp={handleKeyUp}
           onFocus={handleInputFocus}
           onBlur={handleInputBlur}
-          className={`w-full mt-2 px-3 py-2 text-sm text-center font-mono border rounded-lg bg-gray-50 cursor-pointer focus:outline-none transition-all ${
+          className={`w-full mt-2 px-3 py-2 text-xs text-center font-mono border rounded-lg bg-gray-50 cursor-pointer focus:outline-none transition-all ${
             isRecordingShortcut
               ? 'border-blue-400 ring-2 ring-blue-100 bg-blue-50'
               : 'border-gray-200 hover:border-gray-300'
@@ -150,7 +150,7 @@ export const ShortcutSettings = ({
             <button
               key={option.value}
               onClick={() => handleModeChange(option.value)}
-              className={`flex-1 px-2 py-1.5 text-sm rounded-lg border transition-all ${
+              className={`flex-1 px-2 py-1.5 text-xs rounded-lg border transition-all ${
                 currentMode === option.value
                   ? 'bg-blue-50 border-blue-300 text-blue-700 font-medium'
                   : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300'

@@ -26,7 +26,7 @@ export const TranscriptionCard = memo<TranscriptionCardProps>(({
         <button
           onClick={onCopy}
           disabled={!transcript}
-          className={`text-sm px-2 py-1 rounded-md transition-colors ${
+          className={`text-xs px-2 py-1 rounded-md transition-colors ${
             copySuccess
               ? 'text-green-600 bg-green-50'
               : transcript
@@ -39,7 +39,7 @@ export const TranscriptionCard = memo<TranscriptionCardProps>(({
       </div>
       <div className="p-3 min-h-[60px] max-h-[100px] overflow-y-auto">
         {transcript ? (
-          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap break-words">
+          <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap break-words">
             {transcript}
           </p>
         ) : (
