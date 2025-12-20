@@ -297,7 +297,7 @@ function App() {
 
   // 状态指示器颜色
   const statusConfig = {
-    idle: { color: 'bg-gray-400', label: '就绪' },
+    idle: { color: 'bg-green-500', label: '就绪' },
     recording: { color: 'bg-red-500 animate-pulse', label: '录音中' },
     transcribing: { color: 'bg-blue-500 animate-pulse', label: '转写中' },
     ready: { color: 'bg-green-500', label: '完成' },
