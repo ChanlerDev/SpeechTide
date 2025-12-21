@@ -2,7 +2,11 @@
  * 自动更新服务
  *
  * 负责检查、下载和安装应用更新
- * 使用 electron-updater 实现增量更新（blockmap）
+ *
+ * 差分更新说明：
+ * - electron-updater 6.x 原生支持 macOS ZIP 差分下载（PR #7709）
+ * - 差分下载需要 cacheDir/update.zip 存在（上次下载的 ZIP）
+ * - 自定义安装脚本会保存 update.zip 以供下次差分下载使用
  */
 
 import { BrowserWindow, ipcMain, app, shell } from 'electron'
@@ -280,48 +284,12 @@ export class UpdateService {
    */
   async downloadUpdate(): Promise<{ success: boolean; error?: string }> {
     try {
-      // 设置旧文件路径，启用差分下载
-      this.setupDifferentialDownload()
-
       await this.autoUpdater.downloadUpdate()
       return { success: true }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       logger.error(error instanceof Error ? error : new Error(message), { context: 'downloadUpdate' })
       return { success: false, error: message }
-    }
-  }
-
-  /**
-   * 设置差分下载
-   * electron-updater 会自动在其缓存目录中查找旧文件进行差分下载
-   * 我们只需要确保旧文件存在于缓存目录中
-   */
-  private setupDifferentialDownload(): void {
-    try {
-      const homeDir = app.getPath('home')
-      const updaterCacheDir = path.join(homeDir, 'Library', 'Caches', 'speechtide-updater')
-
-      if (!fs.existsSync(updaterCacheDir)) {
-        logger.info('缓存目录不存在，将进行全量下载', { updaterCacheDir })
-        return
-      }
-
-      const files = fs.readdirSync(updaterCacheDir)
-      const zipFile = files.find(f => f.endsWith('.zip') && f.startsWith('SpeechTide-'))
-
-      if (zipFile) {
-        const oldFilePath = path.join(updaterCacheDir, zipFile)
-        const stats = fs.statSync(oldFilePath)
-        logger.info('找到旧版本文件，将进行差分下载', {
-          oldFile: zipFile,
-          size: `${(stats.size / 1024 / 1024).toFixed(2)} MB`,
-        })
-      } else {
-        logger.info('未找到旧版本文件，将进行全量下载', { files })
-      }
-    } catch (e) {
-      logger.warn('检查差分下载条件失败', { error: e instanceof Error ? e.message : String(e) })
     }
   }
 
@@ -352,13 +320,11 @@ export class UpdateService {
 
     // 查找下载的 ZIP 文件
     let zipPath = ''
-    let zipFileName = ''
     try {
       const files = fs.readdirSync(pendingPath)
       const zipFile = files.find(f => f.endsWith('.zip'))
       if (zipFile) {
         zipPath = path.join(pendingPath, zipFile)
-        zipFileName = zipFile
       }
     } catch (e) {
       logger.error(e instanceof Error ? e : new Error(String(e)), { context: 'customInstall:findZip' })
@@ -404,20 +370,19 @@ xattr -cr "${appPath}" 2>/dev/null || true
 rm -rf /tmp/speechtide-update
 
 # ====== 差分下载文件保留 ======
-# electron-updater 会自动在其缓存目录中查找旧文件进行差分下载
-# 我们只需要将文件从 pending 移动到主缓存目录即可
+# electron-updater 在 MacUpdater.ts 中查找 cacheDir/update.zip 进行差分下载
+# 必须将当前版本的 ZIP 保存为 update.zip 才能启用差分下载
 
-# 保留当前版本的 ZIP 文件
-cp "${zipPath}" "$UPDATER_CACHE_DIR/${zipFileName}" 2>/dev/null || true
+# 保留当前版本的 ZIP 文件为 update.zip（差分下载必需）
+cp "${zipPath}" "$UPDATER_CACHE_DIR/update.zip" 2>/dev/null || true
 
 # 验证复制是否成功
-if [ -f "$UPDATER_CACHE_DIR/${zipFileName}" ]; then
-  # 清理旧的缓存文件（排除刚复制的文件）
-  find "$UPDATER_CACHE_DIR" -maxdepth 1 -name "*.zip" -type f ! -name "${zipFileName}" -delete 2>/dev/null || true
-  # 清理 pending 文件夹
+if [ -f "$UPDATER_CACHE_DIR/update.zip" ]; then
+  # 清理 pending 文件夹和其他旧的 ZIP 文件
   rm -rf "$UPDATER_CACHE_DIR/pending"
+  find "$UPDATER_CACHE_DIR" -maxdepth 1 -name "*.zip" -type f ! -name "update.zip" -delete 2>/dev/null || true
 else
-  echo "警告：ZIP 文件保留失败，下次更新将全量下载"
+  echo "警告：update.zip 保留失败，下次更新将全量下载"
 fi
 
 # 重新启动应用
