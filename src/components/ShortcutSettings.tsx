@@ -123,7 +123,7 @@ export const ShortcutSettings = ({
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 space-y-3">
       {/* 快捷键输入 */}
       <div>
-        <span className="text-xs font-medium text-gray-600">快捷键</span>
+        <span className="text-sm font-medium text-gray-700">快捷键</span>
         <input
           ref={inputRef}
           type="text"
@@ -133,9 +133,9 @@ export const ShortcutSettings = ({
           onKeyUp={handleKeyUp}
           onFocus={handleInputFocus}
           onBlur={handleInputBlur}
-          className={`w-full mt-2 px-3 py-2 text-sm text-center font-mono border rounded-lg bg-gray-50 cursor-pointer focus:outline-none transition-all ${
-            isRecordingShortcut 
-              ? 'border-blue-400 ring-2 ring-blue-100 bg-blue-50' 
+          className={`w-full mt-2 px-3 py-2 text-xs text-center font-mono border rounded-lg bg-gray-50 cursor-pointer focus:outline-none transition-all ${
+            isRecordingShortcut
+              ? 'border-blue-400 ring-2 ring-blue-100 bg-blue-50'
               : 'border-gray-200 hover:border-gray-300'
           }`}
           placeholder="点击设置"
@@ -144,7 +144,7 @@ export const ShortcutSettings = ({
 
       {/* 触发模式选择 */}
       <div>
-        <span className="text-xs font-medium text-gray-600">触发模式</span>
+        <span className="text-sm font-medium text-gray-700">触发模式</span>
         <div className="flex gap-2 mt-2">
           {MODE_OPTIONS.map((option) => (
             <button

@@ -58,7 +58,7 @@ export const TestTranscription = ({
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium text-gray-600">测试转录</span>
+        <span className="text-sm font-medium text-gray-700">测试转录</span>
         <div className="flex items-center gap-1.5">
           <button
             onClick={onPlayTestAudio}
@@ -96,14 +96,14 @@ export const TestTranscription = ({
             </button>
           </div>
           <div className="bg-gray-50 rounded-lg p-2 max-h-[80px] overflow-y-auto">
-            <p className="text-gray-700 text-sm leading-relaxed">
+            <p className="text-xs text-gray-600 leading-relaxed">
               {testResult.text || '无结果'}
             </p>
           </div>
         </div>
       ) : (
         <div className="bg-gray-50 rounded-lg p-3 text-center">
-          <p className="text-gray-300 text-xs">点击测试验证模型</p>
+          <p className="text-xs text-gray-400">点击测试验证模型</p>
         </div>
       )}
     </div>

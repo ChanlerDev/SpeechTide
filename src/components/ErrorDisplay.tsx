@@ -34,7 +34,7 @@ export const ErrorDisplay = ({ error }: ErrorDisplayProps) => {
 
   return (
     <div className="bg-red-50 border border-red-200 rounded-lg p-2 shrink-0">
-      <p className="text-red-600 text-xs">{error}</p>
+      <p className="text-xs text-red-600">{error}</p>
     </div>
   )
 }

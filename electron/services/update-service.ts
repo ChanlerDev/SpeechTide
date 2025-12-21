@@ -84,8 +84,8 @@ export class UpdateService {
   private checkPendingUpdate(): void {
     try {
       const homeDir = app.getPath('home')
-      // electron-updater 在 macOS 上使用 app.{appId}.ShipIt 作为缓存目录
-      const pendingPath = path.join(homeDir, 'Library', 'Caches', 'app.speechtide.ShipIt', 'pending')
+      // electron-updater 在 macOS 上使用 speechtide-updater 作为缓存目录
+      const pendingPath = path.join(homeDir, 'Library', 'Caches', 'speechtide-updater', 'pending')
       const infoPath = path.join(pendingPath, 'update-info.json')
 
       if (fs.existsSync(infoPath)) {
@@ -300,7 +300,7 @@ export class UpdateService {
   private setupDifferentialDownload(): void {
     try {
       const homeDir = app.getPath('home')
-      const updaterCacheDir = path.join(homeDir, 'Library', 'Caches', 'app.speechtide.ShipIt')
+      const updaterCacheDir = path.join(homeDir, 'Library', 'Caches', 'speechtide-updater')
 
       if (!fs.existsSync(updaterCacheDir)) {
         logger.info('缓存目录不存在，将进行全量下载', { updaterCacheDir })
@@ -343,9 +343,9 @@ export class UpdateService {
    * 自定义安装（用于未签名应用）
    */
   private customInstall(): void {
-    // electron-updater 在 macOS 上使用 app.{appId}.ShipIt 作为缓存目录
+    // electron-updater 在 macOS 上使用 speechtide-updater 作为缓存目录
     const homeDir = app.getPath('home')
-    const updaterCacheDir = path.join(homeDir, 'Library', 'Caches', 'app.speechtide.ShipIt')
+    const updaterCacheDir = path.join(homeDir, 'Library', 'Caches', 'speechtide-updater')
     const pendingPath = path.join(updaterCacheDir, 'pending')
     const appPath = app.getPath('exe').replace(/\/Contents\/MacOS\/.*$/, '')
     const version = this.state.availableVersion || 'unknown'

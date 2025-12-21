@@ -71,7 +71,7 @@ export const UpdateStatus = memo(() => {
 
   // Beta 标识组件
   const BetaBadge = () => (
-    <span className="ml-1 px-1 py-0.5 text-[10px] bg-orange-500 text-white rounded font-medium">
+    <span className="ml-1 px-1 py-0.5 text-xs bg-orange-500 text-white rounded font-medium">
       BETA
     </span>
   )
@@ -82,7 +82,7 @@ export const UpdateStatus = memo(() => {
         {/* 空闲 */}
         {status === 'idle' && (
           <>
-            <span className="text-gray-500 flex items-center">
+            <span className="text-gray-600 flex items-center">
               v{currentVersion}
               {isBetaVersion(currentVersion) && <BetaBadge />}
             </span>
@@ -98,7 +98,7 @@ export const UpdateStatus = memo(() => {
         {/* 检查中 */}
         {status === 'checking' && (
           <>
-            <span className="text-gray-500 flex items-center">
+            <span className="text-gray-600 flex items-center">
               v{currentVersion}
               {isBetaVersion(currentVersion) && <BetaBadge />}
             </span>
@@ -112,14 +112,14 @@ export const UpdateStatus = memo(() => {
         {/* 已是最新 */}
         {status === 'not-available' && (
           <>
-            <span className="text-gray-500 flex items-center">
+            <span className="text-gray-600 flex items-center">
               v{currentVersion}
               {isBetaVersion(currentVersion) && <BetaBadge />}
             </span>
             <span className="text-green-500">✓ 已是最新</span>
             <button
               onClick={handleCheck}
-              className="text-gray-400 hover:text-blue-500 text-[10px]"
+              className="text-gray-400 hover:text-blue-500"
             >
               再次检查
             </button>
@@ -129,7 +129,7 @@ export const UpdateStatus = memo(() => {
         {/* 有可用更新 */}
         {status === 'available' && (
           <>
-            <span className="text-gray-500 flex items-center">
+            <span className="text-gray-600 flex items-center">
               v{currentVersion}
               {isBetaVersion(currentVersion) && <BetaBadge />}
             </span>
@@ -188,7 +188,7 @@ export const UpdateStatus = memo(() => {
         {/* 错误 */}
         {status === 'error' && (
           <>
-            <span className="text-gray-500 flex items-center">
+            <span className="text-gray-600 flex items-center">
               v{currentVersion}
               {isBetaVersion(currentVersion) && <BetaBadge />}
             </span>

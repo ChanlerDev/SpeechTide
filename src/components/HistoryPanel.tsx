@@ -10,6 +10,108 @@ interface HistoryPanelProps {
   onBack: () => void
 }
 
+/** 时间范围过滤类型 */
+type TimeRangeFilter = 'keep-today' | 'keep-week' | 'keep-month' | 'clear-all'
+
+const TIME_RANGE_OPTIONS: { value: TimeRangeFilter; label: string }[] = [
+  { value: 'keep-today', label: '保留今天' },
+  { value: 'keep-week', label: '保留本周' },
+  { value: 'keep-month', label: '保留本月' },
+  { value: 'clear-all', label: '全部清除' },
+]
+
+/**
+ * 格式化字节数为可读字符串
+ */
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
+}
+
+/**
+ * 根据时间范围过滤记录（显示要保留的记录）
+ */
+function filterByTimeRange(records: ConversationRecord[], filter: TimeRangeFilter): ConversationRecord[] {
+  if (filter === 'clear-all') return records // 全部清除时显示所有记录
+
+  const now = new Date()
+  let cutoffTime: number
+
+  switch (filter) {
+    case 'keep-today': {
+      // 保留今天：显示今天的记录
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      cutoffTime = todayStart.getTime()
+      return records.filter(record => record.finishedAt >= cutoffTime)
+    }
+    case 'keep-week': {
+      // 保留本周：显示本周的记录
+      const day = now.getDay()
+      const diff = day === 0 ? 6 : day - 1 // 周一为起始
+      const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff)
+      cutoffTime = weekStart.getTime()
+      return records.filter(record => record.finishedAt >= cutoffTime)
+    }
+    case 'keep-month': {
+      // 保留本月：显示本月的记录
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      cutoffTime = monthStart.getTime()
+      return records.filter(record => record.finishedAt >= cutoffTime)
+    }
+    default:
+      return records
+  }
+}
+
+/**
+ * 获取时间范围之外的记录（用于批量删除）
+ */
+function getRecordsOutsideRange(records: ConversationRecord[], filter: TimeRangeFilter): ConversationRecord[] {
+  if (filter === 'clear-all') return records // 全部清除时删除所有记录
+
+  const now = new Date()
+  let cutoffTime: number
+
+  switch (filter) {
+    case 'keep-today': {
+      // 保留今天：清除今天之外的记录
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      cutoffTime = todayStart.getTime()
+      return records.filter(record => record.finishedAt < cutoffTime)
+    }
+    case 'keep-week': {
+      // 保留本周：清除本周之外的记录
+      const day = now.getDay()
+      const diff = day === 0 ? 6 : day - 1
+      const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff)
+      cutoffTime = weekStart.getTime()
+      return records.filter(record => record.finishedAt < cutoffTime)
+    }
+    case 'keep-month': {
+      // 保留本月：清除本月之外的记录
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      cutoffTime = monthStart.getTime()
+      return records.filter(record => record.finishedAt < cutoffTime)
+    }
+    default:
+      return []
+  }
+}
+
+/**
+ * 计算记录集合的总大小（估算）
+ */
+function calculateTotalSize(records: ConversationRecord[]): number {
+  return records.reduce((sum, record) => {
+    const textSize = (record.transcript?.length || 0) * 2
+    const audioSize = 3000 // 估算音频文件约 3KB
+    return sum + textSize + audioSize
+  }, 0)
+}
+
 /**
  * 格式化时间戳为可读字符串
  */
@@ -56,13 +158,34 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
   const [playingId, setPlayingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const playTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // 新增状态：时间过滤和批量清除
+  const [timeFilter, setTimeFilter] = useState<TimeRangeFilter>('keep-today')
+  const [isClearing, setIsClearing] = useState(false)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
+
+  // 前端过滤逻辑
+  const filteredRecords = filterByTimeRange(records, timeFilter)
+  const filteredStats = {
+    count: filteredRecords.length,
+    sizeBytes: calculateTotalSize(filteredRecords),
+  }
+
+  // 计算待清除的记录（范围之外）
+  const recordsToDelete = getRecordsOutsideRange(records, timeFilter)
+  const deleteStats = {
+    count: recordsToDelete.length,
+    sizeBytes: calculateTotalSize(recordsToDelete),
+  }
 
   // 加载历史记录
   const loadHistory = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const result = await window.speech.getHistoryList({ limit: 100 })
+      // 增大 limit 以处理大量历史记录
+      const result = await window.speech.getHistoryList({ limit: 1000 })
       if (result.error) {
         setError(result.error)
       } else {
@@ -78,6 +201,18 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
   useEffect(() => {
     loadHistory()
   }, [loadHistory])
+
+  // 清理 timeout，防止内存泄漏
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
+      if (playTimeoutRef.current) {
+        clearTimeout(playTimeoutRef.current)
+      }
+    }
+  }, [])
 
   // 复制文本
   const handleCopy = async (record: ConversationRecord) => {
@@ -98,14 +233,21 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
   // 播放音频
   const handlePlay = async (record: ConversationRecord) => {
     if (playingId === record.id) return
+
+    // 清除之前的播放超时
+    if (playTimeoutRef.current) {
+      clearTimeout(playTimeoutRef.current)
+    }
+
     setPlayingId(record.id)
     try {
       await window.speech.playHistoryAudio(record.id)
     } catch (err) {
       console.error('播放失败:', err)
     } finally {
-      // 延迟重置播放状态，给音频一些播放时间
-      setTimeout(() => setPlayingId(null), 1000)
+      // 根据音频实际时长设置状态重置时间
+      const resetDelay = Math.max(1000, record.durationMs)
+      playTimeoutRef.current = setTimeout(() => setPlayingId(null), resetDelay)
     }
   }
 
@@ -127,6 +269,41 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
     }
   }
 
+  // 批量清除历史记录（删除选中范围之外的记录）
+  const handleBulkClear = async () => {
+    setShowClearConfirm(false)
+    setIsClearing(true)
+
+    let deletedCount = 0
+    // 获取范围之外的记录（要删除的记录）
+    const recordsToDelete = [...getRecordsOutsideRange(records, timeFilter)]
+
+    try {
+      // 逐个删除范围之外的记录
+      for (const record of recordsToDelete) {
+        try {
+          const result = await window.speech.deleteHistoryItem(record.id)
+          if (result.success) {
+            deletedCount++
+            // 实时更新UI
+            setRecords(prev => prev.filter(r => r.id !== record.id))
+          }
+        } catch (err) {
+          console.error(`删除记录 ${record.id} 失败:`, err)
+        }
+      }
+
+      console.log(`已删除 ${deletedCount} 条历史记录`)
+      if (deletedCount < recordsToDelete.length) {
+        alert(`部分记录删除失败，成功删除 ${deletedCount}/${recordsToDelete.length} 条`)
+      }
+    } catch (err) {
+      alert('清除失败: ' + (err instanceof Error ? err.message : '未知错误'))
+    } finally {
+      setIsClearing(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 bg-gradient-to-b from-slate-50 to-white flex flex-col">
       {/* 固定头部区域 */}
@@ -135,25 +312,93 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
         <div className="h-7 bg-white/80" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
 
         {/* 头部 */}
-        <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-100 bg-white/95">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            <span className="text-xs">返回</span>
-          </button>
-          <div className="flex items-center gap-2 flex-1">
-            <h2 className="text-sm font-semibold text-gray-800">历史记录</h2>
-            {copiedId && (
-              <span className="text-xs text-green-600 font-medium">
-                已复制到剪贴板
-              </span>
-            )}
+        <div className="px-3 py-2 border-b border-gray-100 bg-white/95">
+          {/* 第一行：返回按钮和标题 */}
+          <div className="flex items-center justify-between mb-2">
+            <button
+              onClick={onBack}
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span className="text-xs text-gray-600">返回</span>
+            </button>
+            <h2 className="text-sm font-medium text-gray-700">历史记录</h2>
+            <div className="w-16" /> {/* 占位保持居中 */}
           </div>
-          <span className="text-xs text-gray-400">{records.length} 条</span>
+
+          {/* 第二行：时间过滤器 */}
+          <div className="flex items-center gap-1.5 mb-2">
+            {TIME_RANGE_OPTIONS.map(option => (
+              <button
+                key={option.value}
+                onClick={() => setTimeFilter(option.value)}
+                className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                  timeFilter === option.value
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+
+          {/* 第三行：统计信息和批量清除 */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-400">
+              {filteredStats.count} 条 · {formatBytes(filteredStats.sizeBytes)}
+            </span>
+            <button
+              onClick={() => setShowClearConfirm(true)}
+              disabled={isClearing || deleteStats.count === 0}
+              className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                isClearing || deleteStats.count === 0
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-red-50 text-red-600 hover:bg-red-100'
+              }`}
+            >
+              {isClearing ? '清除中...' : '批量清除'}
+            </button>
+          </div>
+
+          {/* 复制提示（全局） */}
+          {copiedId && (
+            <div className="mt-2 text-xs text-green-600 font-medium text-center">
+              已复制到剪贴板
+            </div>
+          )}
+
+          {/* 清除确认对话框 */}
+          {showClearConfirm && (
+            <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-xs text-gray-400 mb-2">
+                {timeFilter === 'clear-all' ? (
+                  <>确定要清除全部历史记录吗？共 {deleteStats.count} 条，此操作不可恢复。</>
+                ) : (
+                  <>
+                    确定执行"{TIME_RANGE_OPTIONS.find(o => o.value === timeFilter)?.label}"吗？
+                    将清除 {deleteStats.count} 条记录，此操作不可恢复。
+                  </>
+                )}
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setShowClearConfirm(false)}
+                  className="px-2 py-1 text-xs bg-white border border-gray-200 rounded hover:bg-gray-50"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleBulkClear}
+                  className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                >
+                  确认清除
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -165,7 +410,7 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
           </div>
         ) : error ? (
           <div className="p-4 text-center">
-            <p className="text-red-500 text-sm">{error}</p>
+            <p className="text-xs text-red-500">{error}</p>
             <button
               onClick={loadHistory}
               className="mt-2 text-xs text-blue-600 hover:underline"
@@ -173,15 +418,22 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
               重试
             </button>
           </div>
-        ) : records.length === 0 ? (
+        ) : filteredRecords.length === 0 ? (
           <div className="p-8 text-center">
             <div className="text-4xl mb-3">📝</div>
-            <p className="text-gray-400 text-sm">暂无历史记录</p>
-            <p className="text-gray-300 text-xs mt-1">开始录音后会自动保存</p>
+            <p className="text-xs text-gray-400">
+              {timeFilter === 'keep-today' ? '今天暂无记录' :
+               timeFilter === 'keep-week' ? '本周暂无记录' :
+               timeFilter === 'keep-month' ? '本月暂无记录' :
+               timeFilter === 'clear-all' ? '暂无历史记录' : '暂无记录'}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              {timeFilter === 'clear-all' ? '开始录音后会自动保存' : '可尝试切换其他时间范围'}
+            </p>
           </div>
         ) : (
           <div className="p-2 space-y-2">
-            {records.map((record) => (
+            {filteredRecords.map((record) => (
               <div
                 key={record.id}
                 onClick={() => handleCopy(record)}
@@ -253,22 +505,15 @@ export const HistoryPanel = memo<HistoryPanelProps>(({ onBack }) => {
                 {/* 转录文本 */}
                 <div className="min-h-[36px]">
                   {record.error ? (
-                    <p className="text-red-400 text-sm">转写失败: {record.error}</p>
+                    <p className="text-xs text-red-400">转写失败: {record.error}</p>
                   ) : record.transcript ? (
-                    <p className="text-gray-700 text-sm leading-relaxed line-clamp-3">
+                    <p className="text-xs text-gray-600 leading-relaxed line-clamp-3">
                       {record.transcript}
                     </p>
                   ) : (
-                    <p className="text-gray-300 text-sm">无转录内容</p>
+                    <p className="text-xs text-gray-400">无转录内容</p>
                   )}
                 </div>
-
-                {/* 复制提示 */}
-                {copiedId === record.id && (
-                  <div className="mt-2 text-xs text-green-600 font-medium">
-                    已复制
-                  </div>
-                )}
               </div>
             ))}
           </div>
