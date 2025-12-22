@@ -2,28 +2,44 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap');
+
 @layer base {
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Warm minimal palette */
+    --background: 40 20% 98%;
+    --foreground: 30 10% 15%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 30 10% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    --popover-foreground: 30 10% 15%;
+    --primary: 220 70% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 35 25% 93%;
+    --secondary-foreground: 30 10% 25%;
+    --muted: 40 15% 94%;
+    --muted-foreground: 30 8% 55%;
+    --accent: 25 90% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 35 15% 88%;
+    --input: 35 15% 88%;
+    --ring: 220 70% 50%;
+    --radius: 0.75rem;
+
+    /* Custom additions */
+    --surface: 40 15% 96%;
+    --text-primary: 30 10% 15%;
+    --text-secondary: 30 8% 45%;
+    --text-tertiary: 30 6% 65%;
   }
 
   * {
@@ -32,13 +48,85 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'SF Pro Display', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    line-height: 1.4;
+    font-family: 'Instrument Sans', 'SF Pro Display', system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
     font-weight: 400;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  .font-mono {
+    font-family: 'Geist Mono', 'SF Mono', 'Menlo', monospace;
+  }
+}
+
+@layer components {
+  /* Transcript card - hero element */
+  .transcript-card {
+    @apply bg-white rounded-xl p-4;
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.04),
+      0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Subtle divider */
+  .divider {
+    @apply h-px w-full;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--border)) 20%,
+      hsl(var(--border)) 80%,
+      transparent
+    );
+  }
+
+  /* Icon button */
+  .icon-btn {
+    @apply flex flex-col items-center justify-center gap-1 p-3 rounded-xl transition-all;
+    @apply text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))];
+    @apply hover:bg-[hsl(var(--muted))];
+  }
+
+  .icon-btn.active {
+    @apply bg-[hsl(var(--primary))] text-white;
+  }
+
+  /* Chip button */
+  .chip {
+    @apply px-3 py-1.5 text-xs font-medium rounded-full transition-all;
+    @apply bg-[hsl(var(--muted))] text-[hsl(var(--text-secondary))];
+    @apply hover:bg-[hsl(var(--secondary))];
+  }
+
+  .chip.active {
+    @apply bg-[hsl(var(--primary))] text-white;
+  }
+
+  /* Status dot with pulse */
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .status-dot.idle {
+    @apply bg-emerald-500;
+  }
+
+  .status-dot.recording {
+    @apply bg-rose-500;
+    animation: pulse-recording 1.5s ease-in-out infinite;
+  }
+
+  .status-dot.transcribing {
+    @apply bg-blue-500;
+    animation: pulse-recording 1s ease-in-out infinite;
+  }
+
+  @keyframes pulse-recording {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.15); }
   }
 }
 

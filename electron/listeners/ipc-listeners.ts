@@ -16,6 +16,7 @@ export interface IPCHandlers {
   getShortcut: () => ShortcutConfig
   updateShortcut: (shortcut: ShortcutConfig) => Promise<{ success: boolean; error?: string }>
   setShortcutRecording: (recording: boolean) => void
+  setPanelMode: (mode: 'main' | 'withSettings' | 'withTest' | 'history') => void
   getSettings: () => ReturnType<typeof loadAppSettings>
   updateSettings: (settings: Partial<{
     autoInsertText: boolean
@@ -126,6 +127,11 @@ export class IPCListeners {
       this.handlers?.setShortcutRecording(recording)
     })
 
+    // 设置面板模式（调整窗口高度）
+    ipcMain.handle('speech:set-panel-mode', (_event, mode: 'main' | 'withSettings' | 'withTest' | 'history') => {
+      this.handlers?.setPanelMode(mode)
+    })
+
     // 获取历史记录统计
     ipcMain.handle('speech:get-history-stats', async (_event, options: { maxAgeDays?: number }) => {
       return this.handlers?.getHistoryStats(options || {})
@@ -172,6 +178,7 @@ export class IPCListeners {
     ipcMain.removeHandler('speech:test-transcription')
     ipcMain.removeHandler('speech:play-test-audio')
     ipcMain.removeHandler('speech:set-shortcut-recording')
+    ipcMain.removeHandler('speech:set-panel-mode')
     ipcMain.removeHandler('speech:get-history-stats')
     ipcMain.removeHandler('speech:clear-history')
     ipcMain.removeHandler('speech:get-history-list')

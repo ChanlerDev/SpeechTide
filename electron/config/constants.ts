@@ -61,10 +61,30 @@ export const APP_CONSTANTS = {
  * 窗口配置
  */
 export const WINDOW_CONFIG = {
-  width: 420,
-  height: 720,
-  minWidth: 380,
-  minHeight: 620,
+  /** 基础宽度 */
+  width: 360,
+  /** 基础高度（主面板折叠状态） */
+  height: 340,
+  /** 最小宽度 */
+  minWidth: 340,
+  /** 最小高度 */
+  minHeight: 300,
+  /** 最大宽度 */
   maxWidth: 420,
-  maxHeight: 800,
+  /** 最大高度（历史面板或展开状态） */
+  maxHeight: 640,
+} as const
+
+/**
+ * 面板高度预设
+ */
+export const PANEL_HEIGHTS = {
+  /** 主面板基础高度 */
+  main: 340,
+  /** 设置面板展开时的高度（4个选项） */
+  withSettings: 520,
+  /** 测试面板展开时的高度（按钮+结果） */
+  withTest: 460,
+  /** 历史面板高度 */
+  history: 560,
 } as const
