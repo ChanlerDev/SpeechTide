@@ -1,40 +1,17 @@
 /**
  * Copyright (c) 2025 SpeechTide Contributors
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * MIT License
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import type { SpeechTideState, ShortcutConfig } from '../shared/app-state'
-import { TranscriptionCard } from './components/TranscriptionCard'
-import { ShortcutSettings } from './components/ShortcutSettings'
-import { TestTranscription } from './components/TestTranscription'
-import { AppSettings } from './components/AppSettings'
-import { ErrorDisplay } from './components/ErrorDisplay'
-import { UpdateStatus } from './components/UpdateStatus'
+import type { SpeechTideState, ShortcutConfig, ShortcutMode } from '../shared/app-state'
 import { Onboarding } from './components/Onboarding'
 import { HistoryPanel } from './components/HistoryPanel'
 import { useNativeRecorder } from './hooks/useNativeRecorder'
 
 const INITIAL_STATE: SpeechTideState = {
   status: 'idle',
-  message: '正在连接主进程…',
+  message: '正在连接…',
   updatedAt: Date.now(),
 }
 
@@ -46,14 +23,31 @@ interface TestResult {
   language?: string
 }
 
+const MODE_OPTIONS: { value: ShortcutMode; label: string }[] = [
+  { value: 'toggle', label: '点击' },
+  { value: 'hold', label: '长按' },
+  { value: 'hybrid', label: '混合' },
+]
+
 /**
- * 主应用组件
- *
- * SpeechTide 的主界面，负责状态管理和组件协调
+ * 状态配置
+ */
+const STATUS_CONFIG = {
+  idle: { label: '就绪', class: 'idle' },
+  recording: { label: '录音中', class: 'recording' },
+  transcribing: { label: '转写中', class: 'transcribing' },
+  ready: { label: '完成', class: 'idle' },
+  error: { label: '错误', class: 'recording' },
+} as const
+
+/**
+ * 主应用组件 - 极简面板设计
  */
 function App() {
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null)
   const [showHistory, setShowHistory] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [showTest, setShowTest] = useState(false)
   const [state, setState] = useState<SpeechTideState>(INITIAL_STATE)
   const [shortcut, setShortcut] = useState<ShortcutConfig | null>(null)
   const [isRecordingShortcut, setIsRecordingShortcut] = useState(false)
@@ -61,20 +55,14 @@ function App() {
   const [testResult, setTestResult] = useState<TestResult | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [copySuccess, setCopySuccess] = useState(false)
-  const [testCopySuccess, setTestCopySuccess] = useState(false)
   const [clipboardMode, setClipboardMode] = useState(false)
   const [autoShowOnStart, setAutoShowOnStart] = useState(false)
   const [cacheTTLMinutes, setCacheTTLMinutes] = useState(30)
   const [allowBetaUpdates, setAllowBetaUpdates] = useState(false)
-  const [appleScriptPermission, setAppleScriptPermission] = useState<{
-    available: boolean
-    hasPermission: boolean
-    message: string
-    guide?: string
-  } | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const shortcutInputRef = useRef<HTMLInputElement>(null)
+  const pressedKeysRef = useRef<Set<string>>(new Set())
 
-  // 初始化原生录音（无需 SoX）
   useNativeRecorder()
 
   // 检查是否需要显示 Onboarding
@@ -83,8 +71,7 @@ function App() {
       try {
         const shouldShow = await window.onboarding.shouldShow()
         setShowOnboarding(shouldShow)
-      } catch (error) {
-        console.error('检查 Onboarding 状态失败:', error)
+      } catch {
         setShowOnboarding(false)
       }
     }
@@ -98,71 +85,23 @@ function App() {
       setShortcut(s.shortcut)
       setClipboardMode(s.clipboardMode)
       setAutoShowOnStart(s.autoShowOnStart)
-      // 兜底处理：防止配置缺字段或损坏
       setCacheTTLMinutes(Number.isFinite(s.cacheTTLMinutes) ? s.cacheTTLMinutes : 30)
       setAllowBetaUpdates(s.allowBetaUpdates ?? false)
     })
 
-    // 检查 AppleScript 权限
-    const checkAppleScript = async () => {
-      try {
-        const result = await window.speech.checkAppleScriptPermission()
-        setAppleScriptPermission(result)
-      } catch (err) {
-        console.error('检查 AppleScript 权限失败:', err)
-        setAppleScriptPermission({
-          available: false,
-          hasPermission: false,
-          message: '检查权限失败'
-        })
-      }
-    }
-    checkAppleScript()
-
-    // 监听音频播放事件
     const disposeAudio = window.speech.onPlayAudio((audioPath) => {
-      console.log('[App] 收到播放音频事件:', audioPath)
       if (audioRef.current) {
         audioRef.current.pause()
         audioRef.current = null
       }
-
-      // 尝试多种方式加载音频
       const audio = new Audio()
       audioRef.current = audio
-
-      // 设置事件监听器
-      audio.onended = () => {
-        console.log('[App] 音频播放结束')
-        setIsPlaying(false)
-      }
-      audio.onerror = (e) => {
-        console.error('[App] 音频播放错误:', e, '路径:', audioPath)
-        setIsPlaying(false)
-      }
-      audio.oncanplay = () => {
-        console.log('[App] 音频可以播放')
-      }
-      audio.onloadstart = () => {
-        console.log('[App] 音频开始加载')
-      }
-
-      // 尝试不同的路径格式
+      audio.onended = () => setIsPlaying(false)
+      audio.onerror = () => setIsPlaying(false)
       const audioSrc = audioPath.startsWith('http') ? audioPath : `file://${audioPath}`
-      console.log('[App] 设置音频源:', audioSrc)
       audio.src = audioSrc
-      audio.volume = 0.8 // 设置音量
-
-      // 尝试播放
-      audio.play()
-        .then(() => {
-          console.log('[App] 音频开始播放')
-          setIsPlaying(true)
-        })
-        .catch((err) => {
-          console.error('[App] 音频播放失败:', err)
-          setIsPlaying(false)
-        })
+      audio.volume = 0.8
+      audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false))
     })
 
     return () => {
@@ -175,74 +114,54 @@ function App() {
     }
   }, [])
 
-  const copyToClipboard = async (text: string, setSuccess: (v: boolean) => void) => {
+  const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 2000)
-    } catch (err) {
-      console.error('复制失败:', err)
+      setCopySuccess(true)
+      setTimeout(() => setCopySuccess(false), 2000)
+    } catch {
+      // ignore
     }
   }
 
-  const handleShortcutChange = useCallback(
-    async (newShortcut: ShortcutConfig) => {
-      const result = await window.speech.updateShortcut(newShortcut)
-      if (result.success) {
-        setShortcut(newShortcut)
-      }
-      return result
-    },
-    []
-  )
+  const handleShortcutChange = useCallback(async (newShortcut: ShortcutConfig) => {
+    const result = await window.speech.updateShortcut(newShortcut)
+    if (result.success) setShortcut(newShortcut)
+    return result
+  }, [])
 
-  const playTestAudio = async () => {
-    if (isPlaying) return
-    setIsPlaying(true)
-    try {
-      await window.speech.playTestAudio()
-    } catch (err) {
-      console.error('播放失败:', err)
-    } finally {
-      setIsPlaying(false)
-    }
-  }
+  const handleModeChange = useCallback((mode: ShortcutMode) => {
+    if (!shortcut) return
+    handleShortcutChange({ ...shortcut, mode })
+  }, [shortcut, handleShortcutChange])
 
-  const updateClipboardMode = async (value: boolean) => {
-    setClipboardMode(value)
-    try {
-      await window.speech.updateSettings({ clipboardMode: value })
-    } catch (err) {
-      console.error('更新剪贴板模式设置失败:', err)
-    }
-  }
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isRecordingShortcut) return
+    e.preventDefault()
+    e.stopPropagation()
+    pressedKeysRef.current.add(e.code)
+  }, [isRecordingShortcut])
 
-  const updateAutoShowOnStart = async (value: boolean) => {
-    setAutoShowOnStart(value)
-    try {
-      await window.speech.updateSettings({ autoShowOnStart: value })
-    } catch (err) {
-      console.error('更新启动显示设置失败:', err)
-    }
-  }
+  const handleKeyUp = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isRecordingShortcut) return
+    e.preventDefault()
+    e.stopPropagation()
+    const pressedKeys = Array.from(pressedKeysRef.current)
+    pressedKeysRef.current.clear()
+    if (pressedKeys.length === 0) return
 
-  const updateCacheTTL = async (value: number) => {
-    setCacheTTLMinutes(value)
-    try {
-      await window.speech.updateSettings({ cacheTTLMinutes: value })
-    } catch (err) {
-      console.error('更新缓存时间设置失败:', err)
-    }
-  }
+    const modifierOrder = ['MetaLeft', 'MetaRight', 'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight', 'ShiftLeft', 'ShiftRight']
+    const modifiers = pressedKeys.filter(k => modifierOrder.includes(k)).sort((a, b) => modifierOrder.indexOf(a) - modifierOrder.indexOf(b))
+    const otherKeys = pressedKeys.filter(k => !modifierOrder.includes(k))
+    const accelerator = [...modifiers, ...otherKeys].join('+')
 
-  const updateAllowBetaUpdates = async (value: boolean) => {
-    setAllowBetaUpdates(value)
-    try {
-      await window.speech.updateSettings({ allowBetaUpdates: value })
-    } catch (err) {
-      console.error('更新测试版更新设置失败:', err)
+    if (shortcut && accelerator) {
+      handleShortcutChange({ ...shortcut, accelerator })
     }
-  }
+    setIsRecordingShortcut(false)
+    window.speech.setShortcutRecording(false)
+    shortcutInputRef.current?.blur()
+  }, [isRecordingShortcut, shortcut, handleShortcutChange])
 
   const runTest = async () => {
     if (testRunning) return
@@ -264,133 +183,372 @@ function App() {
     }
   }
 
-  const refreshAppleScriptPermission = async () => {
+  const playTestAudio = async () => {
+    if (isPlaying) return
+    setIsPlaying(true)
     try {
-      const result = await window.speech.checkAppleScriptPermission()
-      setAppleScriptPermission(result)
-    } catch (err) {
-      console.error('检查 AppleScript 权限失败:', err)
+      await window.speech.playTestAudio()
+    } catch {
+      // ignore
+    } finally {
+      setIsPlaying(false)
     }
   }
 
-  // 显示加载状态
+  const updateSetting = async (key: string, value: boolean | number) => {
+    const setters: Record<string, (v: unknown) => void> = {
+      clipboardMode: (v) => setClipboardMode(v as boolean),
+      autoShowOnStart: (v) => setAutoShowOnStart(v as boolean),
+      cacheTTLMinutes: (v) => setCacheTTLMinutes(v as number),
+      allowBetaUpdates: (v) => setAllowBetaUpdates(v as boolean),
+    }
+    setters[key]?.(value)
+    try {
+      await window.speech.updateSettings({ [key]: value })
+    } catch {
+      // ignore
+    }
+  }
+
+  // Loading state
   if (showOnboarding === null) {
     return (
-      <div className="h-full flex items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-gray-600">正在加载...</p>
-        </div>
+      <div className="h-full flex items-center justify-center bg-[hsl(var(--background))]">
+        <div className="animate-spin w-6 h-6 border-2 border-[hsl(var(--primary))] border-t-transparent rounded-full" />
       </div>
     )
   }
 
-  // 显示 Onboarding
   if (showOnboarding) {
     return <Onboarding onComplete={() => setShowOnboarding(false)} />
   }
 
-  // 显示历史记录面板
   if (showHistory) {
-    return <HistoryPanel onBack={() => setShowHistory(false)} />
+    return <HistoryPanel onBack={() => {
+      setShowHistory(false)
+      window.speech.setPanelMode('main')
+    }} />
   }
 
-  // 状态指示器颜色
-  const statusConfig = {
-    idle: { color: 'bg-green-500', label: '就绪' },
-    recording: { color: 'bg-red-500 animate-pulse', label: '录音中' },
-    transcribing: { color: 'bg-blue-500 animate-pulse', label: '转写中' },
-    ready: { color: 'bg-green-500', label: '完成' },
-    error: { color: 'bg-red-500', label: '错误' },
-  }
-  const currentStatus = statusConfig[state.status as keyof typeof statusConfig] || statusConfig.idle
+  const currentStatus = STATUS_CONFIG[state.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.idle
 
   return (
-    <div className="h-full bg-gradient-to-b from-slate-50 to-white flex flex-col">
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-3 space-y-2">
-          {/* 头部状态 */}
-          <div className="flex items-center justify-between py-1.5">
-            <div className="flex items-center gap-1.5">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
-                <span className="text-white text-sm">🎙️</span>
-              </div>
-              <div>
-                <h1 className="text-base font-semibold text-gray-800">SpeechTide</h1>
-                <p className="text-xs text-gray-400 truncate max-w-[150px]">{state.message}</p>
-              </div>
+    <div className="h-full flex flex-col bg-[hsl(var(--background))]">
+      {/* macOS 交通灯安全区 */}
+      <div className="h-7 flex-shrink-0" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
+
+      {/* Header */}
+      <header className="flex items-center justify-between px-4 pb-3 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="text-lg font-semibold text-[hsl(var(--text-primary))]">SpeechTide</span>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[hsl(var(--muted))]">
+            <span className={`status-dot ${currentStatus.class}`} />
+            <span className="text-xs text-[hsl(var(--text-secondary))]">{currentStatus.label}</span>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            setShowHistory(true)
+            setShowSettings(false)
+            setShowTest(false)
+            window.speech.setPanelMode('history')
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[hsl(var(--text-secondary))] hover:bg-[hsl(var(--muted))] transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-sm">历史</span>
+        </button>
+      </header>
+
+      {/* Main content */}
+      <main className="px-4">
+        {/* Transcript Card - Hero */}
+        <div className="transcript-card mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium text-[hsl(var(--text-secondary))]">转录结果</span>
+            <button
+              onClick={() => state.transcript && copyToClipboard(state.transcript)}
+              disabled={!state.transcript}
+              className={`text-xs px-2.5 py-1 rounded-md transition-all ${
+                copySuccess
+                  ? 'text-emerald-600 bg-emerald-50'
+                  : state.transcript
+                    ? 'text-[hsl(var(--primary))] hover:bg-[hsl(var(--muted))]'
+                    : 'text-[hsl(var(--text-tertiary))] cursor-not-allowed'
+              }`}
+            >
+              {copySuccess ? '已复制 ✓' : '复制'}
+            </button>
+          </div>
+          <div className="min-h-[60px] max-h-[100px] overflow-y-auto">
+            {state.transcript ? (
+              <p className="text-sm text-[hsl(var(--text-primary))] leading-relaxed whitespace-pre-wrap">
+                {state.transcript}
+              </p>
+            ) : (
+              <p className="text-sm text-[hsl(var(--text-tertiary))] text-center py-2">
+                {state.status === 'recording' ? '正在录音...' :
+                 state.status === 'transcribing' ? '正在转写...' :
+                 '按下快捷键开始录音'}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Shortcut Bar */}
+        <div className="mb-3">
+          <div className="divider mb-3" />
+          <div className="flex items-center justify-between gap-3">
+            <input
+              ref={shortcutInputRef}
+              type="text"
+              readOnly
+              value={isRecordingShortcut ? '按下快捷键...' : (shortcut?.accelerator || '')}
+              onKeyDown={handleKeyDown}
+              onKeyUp={handleKeyUp}
+              onFocus={() => {
+                setIsRecordingShortcut(true)
+                window.speech.setShortcutRecording(true)
+              }}
+              onBlur={() => {
+                setIsRecordingShortcut(false)
+                window.speech.setShortcutRecording(false)
+              }}
+              className={`flex-1 px-3 py-2 text-sm font-mono text-center rounded-lg cursor-pointer transition-all ${
+                isRecordingShortcut
+                  ? 'bg-[hsl(var(--primary))] text-white'
+                  : 'bg-[hsl(var(--muted))] text-[hsl(var(--text-primary))] hover:bg-[hsl(var(--secondary))]'
+              }`}
+              placeholder="点击设置"
+            />
+            <div className="flex gap-1">
+              {MODE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => handleModeChange(option.value)}
+                  className={`chip ${shortcut?.mode === option.value ? 'active' : ''}`}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
-            <div className="flex items-center gap-2">
-              {/* 历史记录按钮 */}
-              <button
-                onClick={() => setShowHistory(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-colors"
-                title="历史记录"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-xs text-gray-600">历史</span>
-              </button>
-              <div className="flex items-center gap-1.5">
-                <div className={`w-2.5 h-2.5 rounded-full ${currentStatus.color}`} />
-                <span className="text-xs text-gray-600">{currentStatus.label}</span>
+          </div>
+        </div>
+
+        {/* Error Display */}
+        {state.error && (
+          <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl">
+            <p className="text-sm text-rose-700">{state.error}</p>
+          </div>
+        )}
+      </main>
+
+      {/* Bottom Section */}
+      <div className="flex-shrink-0">
+        {/* Footer Bar */}
+        <div className="px-4 py-2.5 flex items-center justify-between border-t border-[hsl(var(--border))]">
+          <UpdateIndicator />
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                const newShowSettings = !showSettings
+                setShowSettings(newShowSettings)
+                setShowTest(false)
+                window.speech.setPanelMode(newShowSettings ? 'withSettings' : 'main')
+              }}
+              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                showSettings
+                  ? 'bg-[hsl(var(--primary))] text-white'
+                  : 'text-[hsl(var(--text-secondary))] hover:bg-[hsl(var(--muted))]'
+              }`}
+            >
+              设置
+            </button>
+            <button
+              onClick={() => {
+                const newShowTest = !showTest
+                setShowTest(newShowTest)
+                setShowSettings(false)
+                window.speech.setPanelMode(newShowTest ? 'withTest' : 'main')
+              }}
+              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                showTest
+                  ? 'bg-[hsl(var(--primary))] text-white'
+                  : 'text-[hsl(var(--text-secondary))] hover:bg-[hsl(var(--muted))]'
+              }`}
+            >
+              测试
+            </button>
+          </div>
+        </div>
+
+        {/* Settings Panel (Below buttons) */}
+        {showSettings && (
+          <div className="px-4 py-3 bg-white border-t border-[hsl(var(--border))]">
+            <div className="space-y-3">
+              <SettingToggle
+                label="禁用自动插入"
+                checked={clipboardMode}
+                onChange={(v) => updateSetting('clipboardMode', v)}
+              />
+              <SettingToggle
+                label="启动时显示面板"
+                checked={autoShowOnStart}
+                onChange={(v) => updateSetting('autoShowOnStart', v)}
+              />
+              <SettingToggle
+                label="接收测试版更新"
+                checked={allowBetaUpdates}
+                onChange={(v) => updateSetting('allowBetaUpdates', v)}
+              />
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-[hsl(var(--text-secondary))]">模型缓存</span>
+                <select
+                  value={cacheTTLMinutes}
+                  onChange={(e) => updateSetting('cacheTTLMinutes', Number(e.target.value))}
+                  className="text-sm bg-[hsl(var(--muted))] border-none rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]"
+                >
+                  <option value={5}>5 分钟</option>
+                  <option value={15}>15 分钟</option>
+                  <option value={30}>30 分钟</option>
+                  <option value={60}>1 小时</option>
+                  <option value={0}>永不卸载</option>
+                </select>
               </div>
             </div>
           </div>
+        )}
 
-          {/* 转录文本卡片 */}
-          <TranscriptionCard
-            transcript={state.transcript}
-            copySuccess={copySuccess}
-            onCopy={() => state.transcript && copyToClipboard(state.transcript, setCopySuccess)}
-          />
-
-          {/* 快捷键设置 */}
-          <ShortcutSettings
-            shortcut={shortcut}
-            isRecordingShortcut={isRecordingShortcut}
-            onShortcutChange={handleShortcutChange}
-            onRecordingChange={(recording) => {
-              setIsRecordingShortcut(recording)
-              window.speech.setShortcutRecording(recording)
-            }}
-          />
-
-          {/* 测试转录 */}
-          <TestTranscription
-            testRunning={testRunning}
-            testResult={testResult}
-            isPlaying={isPlaying}
-            testCopySuccess={testCopySuccess}
-            stateStatus={state.status}
-            onPlayTestAudio={playTestAudio}
-            onRunTest={runTest}
-            onCopyTestResult={() => copyToClipboard(testResult?.text || '', setTestCopySuccess)}
-          />
-
-          {/* 应用设置 */}
-          <AppSettings
-            clipboardMode={clipboardMode}
-            autoShowOnStart={autoShowOnStart}
-            cacheTTLMinutes={cacheTTLMinutes}
-            allowBetaUpdates={allowBetaUpdates}
-            appleScriptPermission={appleScriptPermission}
-            onUpdateClipboardMode={updateClipboardMode}
-            onUpdateAutoShowOnStart={updateAutoShowOnStart}
-            onUpdateCacheTTL={updateCacheTTL}
-            onUpdateAllowBetaUpdates={updateAllowBetaUpdates}
-            onRefreshAppleScriptPermission={refreshAppleScriptPermission}
-          />
-
-          {/* 错误显示 */}
-          <ErrorDisplay error={state.error} />
-
-          {/* 更新状态 */}
-          <UpdateStatus />
-        </div>
+        {/* Test Panel (Below buttons) */}
+        {showTest && (
+          <div className="px-4 py-3 bg-white border-t border-[hsl(var(--border))]">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-[hsl(var(--text-secondary))]">测试转录</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={playTestAudio}
+                  disabled={isPlaying}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-[hsl(var(--muted))] text-[hsl(var(--text-secondary))] hover:bg-[hsl(var(--secondary))] disabled:opacity-50 transition-colors"
+                >
+                  {isPlaying ? '播放中...' : '▶ 试听'}
+                </button>
+                <button
+                  onClick={runTest}
+                  disabled={testRunning || state.status === 'recording' || state.status === 'transcribing'}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-[hsl(var(--primary))] text-white hover:opacity-90 disabled:opacity-50 transition-colors"
+                >
+                  {testRunning ? '测试中...' : '开始测试'}
+                </button>
+              </div>
+            </div>
+            {testResult ? (
+              <div className="p-3 bg-[hsl(var(--muted))] rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                    {(testResult.processingTime / 1000).toFixed(1)}s
+                  </span>
+                  <span className="text-xs text-[hsl(var(--text-tertiary))]">{testResult.modelId}</span>
+                </div>
+                <p className="text-sm text-[hsl(var(--text-primary))]">{testResult.text || '无结果'}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-[hsl(var(--text-tertiary))] text-center py-2">点击测试验证模型</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
+  )
+}
+
+/**
+ * Toggle switch component
+ */
+function SettingToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-[hsl(var(--text-secondary))]">{label}</span>
+      <button
+        onClick={() => onChange(!checked)}
+        className={`relative w-10 h-6 rounded-full transition-colors ${checked ? 'bg-[hsl(var(--primary))]' : 'bg-[hsl(var(--muted))]'}`}
+      >
+        <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? 'left-5' : 'left-1'}`} />
+      </button>
+    </div>
+  )
+}
+
+type UpdateStatus = 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'installing' | 'error'
+
+interface UpdateState {
+  status: UpdateStatus
+  currentVersion: string
+  availableVersion?: string
+  progress?: { percent: number }
+}
+
+/**
+ * Compact update indicator
+ */
+function UpdateIndicator() {
+  const [state, setState] = useState<UpdateState | null>(null)
+
+  useEffect(() => {
+    window.update.getState().then(setState)
+    const dispose = window.update.onStateChange(setState)
+    return dispose
+  }, [])
+
+  if (!state) return null
+
+  const { status, currentVersion, availableVersion, progress } = state
+
+  const handleAction = async () => {
+    if (status === 'idle' || status === 'not-available' || status === 'error') {
+      await window.update.check()
+    } else if (status === 'available') {
+      await window.update.download()
+    } else if (status === 'downloaded') {
+      await window.update.install()
+    }
+  }
+
+  return (
+    <button
+      onClick={handleAction}
+      disabled={status === 'checking' || status === 'downloading' || status === 'installing'}
+      className="flex items-center gap-2 text-xs text-[hsl(var(--text-tertiary))] hover:text-[hsl(var(--text-secondary))] transition-colors disabled:opacity-60"
+    >
+      {status === 'checking' && (
+        <>
+          <span className="w-3 h-3 border border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
+          <span>检查中...</span>
+        </>
+      )}
+      {status === 'downloading' && progress && (
+        <>
+          <span className="w-3 h-3 border border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
+          <span>下载 {progress.percent.toFixed(0)}%</span>
+        </>
+      )}
+      {status === 'downloaded' && (
+        <>
+          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          <span className="text-emerald-600">v{availableVersion} 就绪</span>
+        </>
+      )}
+      {status === 'available' && (
+        <>
+          <span className="w-2 h-2 rounded-full bg-[hsl(var(--accent))]" />
+          <span>v{availableVersion} 可用</span>
+        </>
+      )}
+      {(status === 'idle' || status === 'not-available' || status === 'error') && (
+        <span>v{currentVersion}</span>
+      )}
+    </button>
   )
 }
 
