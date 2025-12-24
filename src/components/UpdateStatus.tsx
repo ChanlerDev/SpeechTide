@@ -88,7 +88,7 @@ export const UpdateStatus = memo(() => {
             </span>
             <button
               onClick={handleCheck}
-              className="text-blue-500 hover:text-blue-600"
+              className="text-[hsl(var(--primary))] hover:opacity-80"
             >
               检查更新
             </button>
@@ -102,8 +102,8 @@ export const UpdateStatus = memo(() => {
               v{currentVersion}
               {isBetaVersion(currentVersion) && <BetaBadge />}
             </span>
-            <span className="flex items-center gap-1 text-blue-500">
-              <span className="animate-spin w-3 h-3 border border-blue-500 border-t-transparent rounded-full" />
+            <span className="flex items-center gap-1 text-[hsl(var(--primary))]">
+              <span className="animate-spin w-3 h-3 border border-[hsl(var(--primary))] border-t-transparent rounded-full" />
               检查中...
             </span>
           </>
@@ -119,7 +119,7 @@ export const UpdateStatus = memo(() => {
             <span className="text-green-500">✓ 已是最新</span>
             <button
               onClick={handleCheck}
-              className="text-gray-400 hover:text-blue-500"
+              className="text-gray-400 hover:text-[hsl(var(--primary))]"
             >
               再次检查
             </button>
@@ -140,7 +140,7 @@ export const UpdateStatus = memo(() => {
             </span>
             <button
               onClick={handleDownload}
-              className="px-2 py-0.5 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+              className="px-2 py-0.5 bg-[hsl(var(--primary))] text-white rounded hover:opacity-90 transition-colors"
             >
               更新
             </button>
@@ -150,10 +150,10 @@ export const UpdateStatus = memo(() => {
         {/* 下载中 */}
         {status === 'downloading' && progress && (
           <div className="flex items-center gap-2 flex-1">
-            <span className="text-blue-500">下载中 {progress.percent.toFixed(0)}%</span>
+            <span className="text-[hsl(var(--primary))]">下载中 {progress.percent.toFixed(0)}%</span>
             <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden max-w-[80px]">
               <div
-                className="h-full bg-blue-500 transition-all duration-300"
+                className="h-full bg-[hsl(var(--primary))] transition-all duration-300"
                 style={{ width: `${progress.percent}%` }}
               />
             </div>
@@ -170,7 +170,7 @@ export const UpdateStatus = memo(() => {
             </span>
             <button
               onClick={handleInstall}
-              className="px-2 py-0.5 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+              className="px-2 py-0.5 bg-[hsl(var(--primary))] text-white rounded hover:opacity-90 transition-colors"
             >
               重启安装
             </button>
@@ -179,8 +179,8 @@ export const UpdateStatus = memo(() => {
 
         {/* 安装中 */}
         {status === 'installing' && (
-          <span className="flex items-center gap-1 text-blue-500">
-            <span className="animate-spin w-3 h-3 border border-blue-500 border-t-transparent rounded-full" />
+          <span className="flex items-center gap-1 text-[hsl(var(--primary))]">
+            <span className="animate-spin w-3 h-3 border border-[hsl(var(--primary))] border-t-transparent rounded-full" />
             正在安装...
           </span>
         )}
@@ -197,7 +197,7 @@ export const UpdateStatus = memo(() => {
             </span>
             <button
               onClick={handleCheck}
-              className="text-blue-500 hover:text-blue-600"
+              className="text-[hsl(var(--primary))] hover:opacity-80"
             >
               重试
             </button>
@@ -208,7 +208,7 @@ export const UpdateStatus = memo(() => {
       {/* 去官网下载链接 */}
       <button
         onClick={handleOpenReleasePage}
-        className="text-gray-400 hover:text-blue-500 ml-2 shrink-0"
+        className="text-gray-400 hover:text-[hsl(var(--primary))] ml-2 shrink-0"
       >
         去官网下载
       </button>

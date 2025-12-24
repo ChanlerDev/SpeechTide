@@ -30,7 +30,7 @@ export const TranscriptionCard = memo<TranscriptionCardProps>(({
             copySuccess
               ? 'text-green-600 bg-green-50'
               : transcript
-                ? 'text-blue-600 hover:bg-blue-50'
+                ? 'text-[hsl(var(--primary))] hover:bg-orange-50'
                 : 'text-gray-300 cursor-not-allowed'
           }`}
         >

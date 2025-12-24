@@ -24,8 +24,8 @@ export function CompleteStep({ onFinish }: CompleteStepProps) {
         
         <div className="w-full max-w-xs space-y-3 mb-6">
           <div className="flex items-center gap-3 bg-white rounded-xl p-3 shadow-sm border border-gray-100">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <span className="text-blue-600 font-bold text-sm">1</span>
+            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+              <span className="text-orange-600 font-bold text-sm">1</span>
             </div>
             <div className="text-left flex-1">
               <p className="text-sm text-gray-700">

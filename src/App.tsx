@@ -101,7 +101,9 @@ function App() {
       const audioSrc = audioPath.startsWith('http') ? audioPath : `file://${audioPath}`
       audio.src = audioSrc
       audio.volume = 0.8
-      audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false))
+      audio.play()
+        .then(() => setIsPlaying(true))
+        .catch(() => setIsPlaying(false))
     })
 
     return () => {
@@ -177,21 +179,33 @@ function App() {
           modelId: result.data.modelId,
           language: result.data.language,
         })
+      } else if (!result.success) {
+        // 显示错误提示
+        setTestResult({ text: `测试失败: ${result.error || '未知错误'}`, duration: 0, processingTime: 0, modelId: '', language: '' })
       }
+    } catch {
+      setTestResult({ text: '测试失败: 网络或系统错误', duration: 0, processingTime: 0, modelId: '', language: '' })
     } finally {
       setTestRunning(false)
     }
   }
 
+  const [playError, setPlayError] = useState<string | null>(null)
+
   const playTestAudio = async () => {
     if (isPlaying) return
     setIsPlaying(true)
+    setPlayError(null)
     try {
-      await window.speech.playTestAudio()
-    } catch {
-      // ignore
-    } finally {
+      const result = await window.speech.playTestAudio()
+      if (!result.success) {
+        setIsPlaying(false)
+        setPlayError(result.error || 'Failed to play audio')
+      }
+      // Success: wait for onPlayAudio event to handle state
+    } catch (err) {
       setIsPlaying(false)
+      setPlayError(err instanceof Error ? err.message : 'Playback failed')
     }
   }
 
@@ -282,7 +296,7 @@ function App() {
               {copySuccess ? '已复制 ✓' : '复制'}
             </button>
           </div>
-          <div className="min-h-[60px] max-h-[100px] overflow-y-auto">
+          <div className="h-[100px] overflow-y-auto">
             {state.transcript ? (
               <p className="text-sm text-[hsl(var(--text-primary))] leading-relaxed whitespace-pre-wrap">
                 {state.transcript}
@@ -386,7 +400,7 @@ function App() {
 
         {/* Settings Panel (Below buttons) */}
         {showSettings && (
-          <div className="px-4 py-3 bg-white border-t border-[hsl(var(--border))]">
+          <div className="px-4 py-3 bg-[hsl(var(--card))] border-t border-[hsl(var(--border))]">
             <div className="space-y-3">
               <SettingToggle
                 label="禁用自动插入"
@@ -423,7 +437,7 @@ function App() {
 
         {/* Test Panel (Below buttons) */}
         {showTest && (
-          <div className="px-4 py-3 bg-white border-t border-[hsl(var(--border))]">
+          <div className="px-4 py-3 bg-[hsl(var(--card))] border-t border-[hsl(var(--border))]">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-[hsl(var(--text-secondary))]">测试转录</span>
               <div className="flex gap-2">
@@ -443,15 +457,22 @@ function App() {
                 </button>
               </div>
             </div>
+            {playError && (
+              <div className="mb-3 p-2 bg-rose-50 border border-rose-200 rounded-lg">
+                <p className="text-xs text-rose-600">{playError}</p>
+              </div>
+            )}
             {testResult ? (
-              <div className="p-3 bg-[hsl(var(--muted))] rounded-lg">
+              <div className="p-3 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                    {(testResult.processingTime / 1000).toFixed(1)}s
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${testResult.processingTime > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                    {testResult.processingTime > 0 ? `${(testResult.processingTime / 1000).toFixed(1)}s` : 'Error'}
                   </span>
-                  <span className="text-xs text-[hsl(var(--text-tertiary))]">{testResult.modelId}</span>
+                  {testResult.modelId && <span className="text-xs text-[hsl(var(--text-tertiary))]">{testResult.modelId}</span>}
                 </div>
-                <p className="text-sm text-[hsl(var(--text-primary))]">{testResult.text || '无结果'}</p>
+                <div className="max-h-[80px] overflow-y-auto">
+                  <p className="text-sm text-[hsl(var(--text-primary))]">{testResult.text || '无结果'}</p>
+                </div>
               </div>
             ) : (
               <p className="text-sm text-[hsl(var(--text-tertiary))] text-center py-2">点击测试验证模型</p>

@@ -9,9 +9,9 @@ interface WelcomeStepProps {
 
 export function WelcomeStep({ onNext, onSkip }: WelcomeStepProps) {
   return (
-    <div className="p-6 flex flex-col h-full bg-gradient-to-b from-blue-50 to-white">
+    <div className="p-6 flex flex-col h-full bg-gradient-to-b from-orange-50 to-white">
       <div className="flex-1 flex flex-col items-center justify-center text-center">
-        <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+        <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
           <span className="text-4xl">🎙️</span>
         </div>
         <h1 className="text-2xl font-bold text-gray-800 mb-2">欢迎使用 SpeechTide</h1>
@@ -21,7 +21,7 @@ export function WelcomeStep({ onNext, onSkip }: WelcomeStepProps) {
         
         <div className="w-full max-w-xs space-y-3 mb-8">
           <div className="flex items-center gap-3 bg-white rounded-xl p-3 shadow-sm border border-gray-100">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-lg">🎤</div>
+            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center text-lg">🎤</div>
             <div className="text-left">
               <p className="text-sm font-medium text-gray-700">授权麦克风</p>
               <p className="text-xs text-gray-400">录制您的语音</p>
@@ -47,7 +47,7 @@ export function WelcomeStep({ onNext, onSkip }: WelcomeStepProps) {
       <div className="flex flex-col gap-3">
         <button
           onClick={onNext}
-          className="w-full py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-medium shadow-sm"
+          className="w-full py-3 bg-[hsl(var(--primary))] text-white rounded-xl hover:opacity-90 transition-colors font-medium shadow-sm"
         >
           开始设置
         </button>

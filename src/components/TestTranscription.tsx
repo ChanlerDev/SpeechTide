@@ -70,7 +70,7 @@ export const TestTranscription = ({
           <button
             onClick={onRunTest}
             disabled={isDisabled}
-            className="text-xs px-2 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
+            className="text-xs px-2 py-1 rounded-md bg-[hsl(var(--primary))] text-white hover:opacity-90 disabled:opacity-50 transition-colors"
           >
             {testRunning ? '转录中...' : '开始测试'}
           </button>
@@ -89,7 +89,7 @@ export const TestTranscription = ({
             <button
               onClick={onCopyTestResult}
               className={`text-xs px-1.5 py-0.5 rounded transition-colors ${
-                testCopySuccess ? 'text-green-600' : 'text-blue-600 hover:bg-blue-50'
+                testCopySuccess ? 'text-green-600' : 'text-[hsl(var(--primary))] hover:bg-orange-50'
               }`}
             >
               {testCopySuccess ? '✓' : '复制'}

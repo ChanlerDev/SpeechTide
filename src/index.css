@@ -13,33 +13,33 @@
   }
 
   :root {
-    /* Warm minimal palette */
-    --background: 40 20% 98%;
-    --foreground: 30 10% 15%;
+    /* 暖砂调色板 - 橙色主色，暖灰底色 */
+    --background: 30 6% 98%;
+    --foreground: 24 10% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 30 10% 15%;
+    --card-foreground: 24 10% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 30 10% 15%;
-    --primary: 220 70% 50%;
+    --popover-foreground: 24 10% 10%;
+    --primary: 25 95% 53%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 35 25% 93%;
-    --secondary-foreground: 30 10% 25%;
-    --muted: 40 15% 94%;
-    --muted-foreground: 30 8% 55%;
-    --accent: 25 90% 55%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 55%;
+    --secondary: 30 10% 93%;
+    --secondary-foreground: 24 10% 25%;
+    --muted: 30 6% 94%;
+    --muted-foreground: 24 5% 50%;
+    --accent: 45 93% 47%;
+    --accent-foreground: 24 10% 10%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 35 15% 88%;
-    --input: 35 15% 88%;
-    --ring: 220 70% 50%;
+    --border: 30 6% 88%;
+    --input: 30 6% 88%;
+    --ring: 25 95% 53%;
     --radius: 0.75rem;
 
     /* Custom additions */
-    --surface: 40 15% 96%;
-    --text-primary: 30 10% 15%;
-    --text-secondary: 30 8% 45%;
-    --text-tertiary: 30 6% 65%;
+    --surface: 30 6% 96%;
+    --text-primary: 24 10% 10%;
+    --text-secondary: 24 5% 45%;
+    --text-tertiary: 24 4% 60%;
   }
 
   * {
@@ -120,7 +120,7 @@
   }
 
   .status-dot.transcribing {
-    @apply bg-blue-500;
+    @apply bg-orange-500;
     animation: pulse-recording 1s ease-in-out infinite;
   }
 
