@@ -86,7 +86,7 @@ export const AppSettings = memo<AppSettingsProps>(({
       <span className="text-xs text-gray-600">{label}</span>
       <button
         onClick={onToggle}
-        className={`relative w-9 h-5 rounded-full transition-colors ${enabled ? 'bg-blue-500' : 'bg-gray-200'}`}
+        className={`relative w-9 h-5 rounded-full transition-colors ${enabled ? 'bg-[hsl(var(--primary))]' : 'bg-gray-200'}`}
       >
         <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${enabled ? 'left-4' : 'left-0.5'}`} />
       </button>
@@ -113,7 +113,7 @@ export const AppSettings = memo<AppSettingsProps>(({
             </div>
             <button
               onClick={handleToggleBeta}
-              className={`relative w-9 h-5 rounded-full transition-colors ${allowBetaUpdates ? 'bg-blue-500' : 'bg-gray-200'}`}
+              className={`relative w-9 h-5 rounded-full transition-colors ${allowBetaUpdates ? 'bg-[hsl(var(--primary))]' : 'bg-gray-200'}`}
             >
               <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${allowBetaUpdates ? 'left-4' : 'left-0.5'}`} />
             </button>
@@ -150,7 +150,7 @@ export const AppSettings = memo<AppSettingsProps>(({
             <select
               value={cacheTTLMinutes}
               onChange={handleCacheTTLChange}
-              className="text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[hsl(var(--primary))]"
             >
               {CACHE_TTL_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>

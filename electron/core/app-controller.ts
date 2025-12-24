@@ -44,7 +44,8 @@ export class AppController {
   private readonly transcriberConfig = loadTranscriberConfig()
   private readonly supportDir = getDefaultSupportDirectory()
   private readonly conversationsDir = path.join(this.supportDir, 'conversations')
-  private readonly testAudioCachePath = path.join(this.supportDir, 'cache', 'test-audio.wav')
+  // 测试音频存储在 assets 目录（持久化，不会被系统清空）
+  private readonly testAudioPath = path.join(this.supportDir, 'assets', 'test-audio.wav')
   private readonly audioRecorder = new AudioRecorder(this.conversationsDir, this.recorderConfig)
   private transcriber: Transcriber | null = null  // 懒加载，支持动态卸载
   private readonly conversationStore = new ConversationStore(this.conversationsDir)
@@ -61,7 +62,7 @@ export class AppController {
   constructor() {
     fs.mkdirSync(this.supportDir, { recursive: true })
     fs.mkdirSync(this.conversationsDir, { recursive: true })
-    fs.mkdirSync(path.dirname(this.testAudioCachePath), { recursive: true })
+    fs.mkdirSync(path.dirname(this.testAudioPath), { recursive: true })
   }
 
   /**
@@ -573,16 +574,16 @@ export class AppController {
 
     try {
       // 检查是否需要下载
-      const needsDownload = !fs.existsSync(this.testAudioCachePath)
-      const message = needsDownload ? '正在下载测试音频并转写...' : '正在转写测试音频...'
+      const needsDownload = !fs.existsSync(this.testAudioPath)
+      const message = needsDownload ? '正在下载测试音频...' : '正在转写测试音频...'
       this.stateMachine.setTranscribing(message, { sessionId })
 
       if (needsDownload) {
-        await this.downloadTestAudio(this.testAudioCachePath)
+        await this.downloadTestAudio(this.testAudioPath)
       }
 
       const transcriber = this.ensureTranscriber()
-      const transcription = await transcriber.transcribe(this.testAudioCachePath)
+      const transcription = await transcriber.transcribe(this.testAudioPath)
       const processingTime = Date.now() - startTime
 
       const record: ConversationRecord = {
@@ -590,7 +591,7 @@ export class AppController {
         startedAt: startTime,
         finishedAt: Date.now(),
         durationMs: transcription.durationMs,
-        audioPath: this.testAudioCachePath,
+        audioPath: this.testAudioPath,
         transcript: transcription.text,
         modelId: transcription.modelId,
         language: transcription.language,
@@ -629,16 +630,17 @@ export class AppController {
   }
 
   /**
-   * 下载测试音频（支持重定向）
+   * 下载测试音频（支持重定向，30秒超时）
    */
   private async downloadTestAudio(targetPath: string): Promise<void> {
     const https = await import('node:https')
     const http = await import('node:http')
+    const TIMEOUT_MS = 30000 // 30秒超时
 
     const download = (urlString: string, redirectCount = 0): Promise<void> => {
       return new Promise((resolve, reject) => {
         if (redirectCount > 5) {
-          reject(new Error('下载失败: 重定向次数过多'))
+          reject(new Error('Download failed: too many redirects'))
           return
         }
 
@@ -650,33 +652,62 @@ export class AppController {
           return
         }
 
+        let fileStream: fs.WriteStream | null = null
+        let settled = false
+
+        const cleanup = () => {
+          if (fileStream) {
+            fileStream.destroy()
+            fileStream = null
+          }
+          fs.unlink(targetPath, () => {})
+        }
+
         const protocol = parsedUrl.protocol === 'https:' ? https : http
-        protocol.get(parsedUrl, (response) => {
-          // 处理重定向 (301, 302, 307, 308)
+        const request = protocol.get(parsedUrl, (response) => {
+          // Handle redirects (301, 302, 307, 308)
           if (response.statusCode && response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-            // 解析相对/绝对重定向 URL
+            response.resume() // Consume response body to free up socket
             const redirectUrl = new URL(response.headers.location, parsedUrl).href
             download(redirectUrl, redirectCount + 1).then(resolve).catch(reject)
             return
           }
 
           if (response.statusCode !== 200) {
-            reject(new Error(`下载失败: HTTP ${response.statusCode}`))
+            response.resume() // Consume response body to free up socket
+            reject(new Error(`Download failed: HTTP ${response.statusCode}`))
             return
           }
 
-          const file = fs.createWriteStream(targetPath)
-          response.pipe(file)
-          file.on('finish', () => {
-            file.close()
+          fileStream = fs.createWriteStream(targetPath)
+          response.pipe(fileStream)
+          fileStream.on('finish', () => {
+            if (settled) return
+            settled = true
+            fileStream?.close()
             resolve()
           })
-          file.on('error', (err) => {
-            fs.unlink(targetPath, () => {})
+          fileStream.on('error', (err) => {
+            if (settled) return
+            settled = true
+            cleanup()
             reject(err)
           })
-        }).on('error', (err) => {
-          fs.unlink(targetPath, () => {})
+        })
+
+        // Set timeout
+        request.setTimeout(TIMEOUT_MS, () => {
+          if (settled) return
+          settled = true
+          request.destroy()
+          cleanup()
+          reject(new Error('Download timeout (30s), please check network'))
+        })
+
+        request.on('error', (err) => {
+          if (settled) return
+          settled = true
+          cleanup()
           reject(err)
         })
       })
@@ -690,13 +721,14 @@ export class AppController {
    */
   private async playTestAudio(): Promise<{ success: boolean; error?: string }> {
     try {
-      if (!fs.existsSync(this.testAudioCachePath)) {
-        await this.downloadTestAudio(this.testAudioCachePath)
+      if (!fs.existsSync(this.testAudioPath)) {
+        await this.downloadTestAudio(this.testAudioPath)
       }
-      this.windowService?.send('speech:play-audio', this.testAudioCachePath)
+      this.windowService?.send('speech:play-audio', this.testAudioPath)
       return { success: true }
     } catch (error) {
-      return { success: false, error: String(error) }
+      const message = error instanceof Error ? error.message : String(error)
+      return { success: false, error: message }
     }
   }
 
