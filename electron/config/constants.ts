@@ -64,15 +64,15 @@ export const WINDOW_CONFIG = {
   /** 基础宽度 */
   width: 360,
   /** 基础高度（主面板折叠状态） */
-  height: 340,
+  height: 370,
   /** 最小宽度 */
   minWidth: 340,
   /** 最小高度 */
-  minHeight: 300,
+  minHeight: 320,
   /** 最大宽度 */
   maxWidth: 420,
   /** 最大高度（历史面板或展开状态） */
-  maxHeight: 640,
+  maxHeight: 660,
 } as const
 
 /**
@@ -80,11 +80,11 @@ export const WINDOW_CONFIG = {
  */
 export const PANEL_HEIGHTS = {
   /** 主面板基础高度 */
-  main: 340,
+  main: 370,
   /** 设置面板展开时的高度（4个选项） */
-  withSettings: 520,
+  withSettings: 540,
   /** 测试面板展开时的高度（按钮+结果） */
-  withTest: 460,
+  withTest: 540,
   /** 历史面板高度 */
-  history: 560,
+  history: 580,
 } as const
