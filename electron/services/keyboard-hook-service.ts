@@ -240,7 +240,9 @@ function parseAccelerator(accelerator: string): ParsedShortcut {
 
 /**
  * 键盘钩子服务
- * 统一 hybrid 行为：按下开始录音，松开停止并根据时长决定触发类型
+ * 统一 hybrid 行为：
+ * - 点按模式：点击开始录音，再次点击停止 → triggerType = 'tap'（触发润色）
+ * - 长按模式：按住说话，松开停止 → triggerType = 'hold'（直接输出）
  */
 export class KeyboardHookService {
   private config: ShortcutConfig
@@ -252,6 +254,7 @@ export class KeyboardHookService {
   private isShortcutDown = false      // 快捷键是否按下
   private keyDownTime = 0             // 按下时间戳
   private isRecording = false         // 是否正在录音
+  private startedThisPress = false    // 这次按键是否开始了录音
   private holdThresholdMs: number     // 长按判定阈值
 
   constructor(config: ShortcutConfig) {
@@ -334,6 +337,7 @@ export class KeyboardHookService {
   private resetState(): void {
     this.isShortcutDown = false
     this.keyDownTime = 0
+    this.startedThisPress = false
   }
 
   /**
@@ -369,7 +373,9 @@ export class KeyboardHookService {
   }
 
   /**
-   * 处理按键按下 - 统一 hybrid：按下即开始录音
+   * 处理按键按下
+   * - 未录音时按下：开始录音，标记 startedThisPress = true
+   * - 录音中按下：标记 startedThisPress = false（准备停止录音）
    */
   private handleKeyDown = (e: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; keycode: number }): void => {
     if (!this.isShortcutMatch(e)) return
@@ -380,15 +386,22 @@ export class KeyboardHookService {
     this.isShortcutDown = true
     this.keyDownTime = Date.now()
 
-    // 未录音时按下，开始录音
     if (!this.isRecording) {
+      // 未录音时按下，开始录音
       this.callbacks?.onRecordingStart()
       this.isRecording = true
+      this.startedThisPress = true  // 这次按键开始了录音
+    } else {
+      // 已在录音中，这次按键将用于停止录音
+      this.startedThisPress = false
     }
   }
 
   /**
-   * 处理按键释放 - 根据按住时长决定 triggerType
+   * 处理按键释放
+   * - 长按（>= holdThresholdMs）：停止录音，triggerType = 'hold'
+   * - 短按且是开始录音的按键：继续录音，等待下次点击
+   * - 短按且是停止录音的按键：停止录音，triggerType = 'tap'
    */
   private handleKeyUp = (e: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; keycode: number }): void => {
     // 只检查主键释放
@@ -399,11 +412,18 @@ export class KeyboardHookService {
     const pressDuration = Date.now() - this.keyDownTime
     this.isShortcutDown = false
 
-    // 正在录音时松开，停止录音并传递触发类型
     if (this.isRecording) {
-      const triggerType: TriggerType = pressDuration >= this.holdThresholdMs ? 'hold' : 'tap'
-      this.callbacks?.onRecordingStop(triggerType)
-      this.isRecording = false
+      if (pressDuration >= this.holdThresholdMs) {
+        // 长按模式：松开停止录音
+        this.callbacks?.onRecordingStop('hold')
+        this.isRecording = false
+      } else if (!this.startedThisPress) {
+        // 短按且不是开始录音的那次 → 这是停止录音的点击
+        this.callbacks?.onRecordingStop('tap')
+        this.isRecording = false
+      }
+      // 短按且是开始录音的那次 → 不停止，继续录音等待下次点击
     }
+    this.startedThisPress = false
   }
 }

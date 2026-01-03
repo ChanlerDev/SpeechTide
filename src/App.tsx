@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import type { SpeechTideState, ShortcutConfig, ShortcutMode } from '../shared/app-state'
+import type { SpeechTideState, ShortcutConfig } from '../shared/app-state'
 import { Onboarding } from './components/Onboarding'
 import { HistoryPanel } from './components/HistoryPanel'
 import { PolishSettings } from './components/PolishSettings'
@@ -34,11 +34,6 @@ interface PolishConfig {
   baseUrl?: string
 }
 
-const MODE_OPTIONS: { value: ShortcutMode; label: string }[] = [
-  { value: 'toggle', label: '点击' },
-  { value: 'hold', label: '长按' },
-  { value: 'hybrid', label: '混合' },
-]
 
 /**
  * 状态配置
@@ -155,10 +150,6 @@ function App() {
     return result
   }, [])
 
-  const handleModeChange = useCallback((mode: ShortcutMode) => {
-    if (!shortcut) return
-    handleShortcutChange({ ...shortcut, mode })
-  }, [shortcut, handleShortcutChange])
 
   const handlePolishConfigChange = useCallback(async (config: PolishConfig) => {
     const result = await window.speech.updateSettings({ polish: config })
@@ -353,6 +344,7 @@ function App() {
                     {testRunning ? '测试中...' :
                      state.status === 'recording' ? '正在录音...' :
                      state.status === 'transcribing' ? '正在转写...' :
+                     state.status === 'polishing' ? '正在润色...' :
                      '按下快捷键开始录音'}
                   </p>
                 </div>
@@ -490,31 +482,21 @@ function App() {
                   </p>
                 </div>
 
-                {/* 触发模式 */}
-                <div>
+                {/* 快捷键行为说明 */}
+                <div className="p-4 bg-[hsl(var(--muted)/0.5)] rounded-lg">
                   <label className="text-sm font-medium text-[hsl(var(--text-primary))] block mb-2">
-                    触发模式
+                    录音模式
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {MODE_OPTIONS.map((option) => (
-                      <button
-                        key={option.value}
-                        onClick={() => handleModeChange(option.value)}
-                        className={`px-3 py-2.5 text-sm rounded-lg border transition-all ${
-                          shortcut?.mode === option.value
-                            ? 'bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))] border-[hsl(var(--primary))]'
-                            : 'bg-[hsl(var(--card))] text-[hsl(var(--text-secondary))] border-[hsl(var(--border))] hover:border-[hsl(var(--primary))]'
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
+                  <div className="space-y-2 text-sm text-[hsl(var(--text-secondary))]">
+                    <div className="flex items-start gap-2">
+                      <span className="inline-flex items-center justify-center w-12 h-5 rounded bg-[hsl(var(--muted))] text-[hsl(var(--text-primary))] text-xs flex-shrink-0">点按</span>
+                      <span>点击开始，再次点击停止录音</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="inline-flex items-center justify-center w-12 h-5 rounded bg-[hsl(var(--muted))] text-[hsl(var(--text-primary))] text-xs flex-shrink-0">长按</span>
+                      <span>按住说话，松开停止录音</span>
+                    </div>
                   </div>
-                  <p className="text-xs text-[hsl(var(--text-tertiary))] text-center mt-2">
-                    {shortcut?.mode === 'toggle' ? '按一次开始，再按一次停止' :
-                     shortcut?.mode === 'hold' ? '按住录音，松开停止' :
-                     '短按切换，长按持续'}
-                  </p>
                 </div>
               </div>
             )}

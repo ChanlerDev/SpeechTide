@@ -21,7 +21,7 @@ const DEFAULT_SETTINGS = {
   shortcut: {
     accelerator: 'MetaRight',
     description: '切换录音流程',
-    mode: 'toggle',
+    holdThresholdMs: 300,  // 长按判定阈值
   },
   autoInsertText: true,
   clipboardMode: false,

@@ -76,52 +76,54 @@ export class PolishEngine {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), this.config.timeoutMs)
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.config.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: this.config.modelId,
-          messages: [
-            { role: 'system', content: this.config.systemPrompt },
-            { role: 'user', content: rawText },
-          ],
-          temperature: 0.3,
-          max_tokens: 2048,
-        }),
-        signal: controller.signal,
-      })
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.config.apiKey}`,
+          },
+          body: JSON.stringify({
+            model: this.config.modelId,
+            messages: [
+              { role: 'system', content: this.config.systemPrompt },
+              { role: 'user', content: rawText },
+            ],
+            temperature: 0.3,
+            max_tokens: 2048,
+          }),
+          signal: controller.signal,
+        })
 
-      clearTimeout(timeoutId)
+        if (!response.ok) {
+          const errorText = await response.text()
+          logger.error(new Error(`API 请求失败: HTTP ${response.status}`), { status: response.status, body: errorText })
+          return { success: false, error: `API 请求失败: HTTP ${response.status}` }
+        }
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        logger.error(new Error(`API 请求失败: HTTP ${response.status}`), { status: response.status, body: errorText })
-        return { success: false, error: `API 请求失败: HTTP ${response.status}` }
+        const data = await response.json() as {
+          choices?: Array<{ message?: { content?: string } }>
+          error?: { message?: string }
+        }
+
+        if (data.error) {
+          logger.error(new Error(`API 返回错误: ${data.error.message}`), { error: data.error })
+          return { success: false, error: data.error.message || 'API 返回错误' }
+        }
+
+        const polishedText = data.choices?.[0]?.message?.content?.trim()
+        if (!polishedText) {
+          logger.error(new Error('API 返回空内容'), { data })
+          return { success: false, error: 'API 返回空内容' }
+        }
+
+        const durationMs = Date.now() - startTime
+        logger.info('润色完成', { durationMs, inputLength: rawText.length, outputLength: polishedText.length })
+
+        return { success: true, text: polishedText, durationMs }
+      } finally {
+        clearTimeout(timeoutId)
       }
-
-      const data = await response.json() as {
-        choices?: Array<{ message?: { content?: string } }>
-        error?: { message?: string }
-      }
-
-      if (data.error) {
-        logger.error(new Error(`API 返回错误: ${data.error.message}`), { error: data.error })
-        return { success: false, error: data.error.message || 'API 返回错误' }
-      }
-
-      const polishedText = data.choices?.[0]?.message?.content?.trim()
-      if (!polishedText) {
-        logger.error(new Error('API 返回空内容'), { data })
-        return { success: false, error: 'API 返回空内容' }
-      }
-
-      const durationMs = Date.now() - startTime
-      logger.info('润色完成', { durationMs, inputLength: rawText.length, outputLength: polishedText.length })
-
-      return { success: true, text: polishedText, durationMs }
     } catch (error) {
       const durationMs = Date.now() - startTime
       if (error instanceof Error) {
