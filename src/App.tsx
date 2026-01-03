@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import type { SpeechTideState, ShortcutConfig } from '../shared/app-state'
+import type { SpeechTideState, ShortcutConfig, ShortcutMode } from '../shared/app-state'
 import { Onboarding } from './components/Onboarding'
 import { HistoryPanel } from './components/HistoryPanel'
 import { PolishSettings } from './components/PolishSettings'
@@ -34,6 +34,12 @@ interface PolishConfig {
   baseUrl?: string
 }
 
+const MODE_OPTIONS: { value: ShortcutMode; label: string }[] = [
+  { value: 'toggle', label: '点击' },
+  { value: 'hold', label: '长按' },
+  { value: 'hybrid', label: '混合' },
+]
+
 /**
  * 状态配置
  */
@@ -46,15 +52,15 @@ const STATUS_CONFIG = {
   error: { label: '错误', class: 'recording' },
 } as const
 
+type TabType = 'shortcut' | 'settings' | 'polish'
+
 /**
- * 主应用组件 - 极简面板设计
+ * 主应用组件 - 双栏布局设计
  */
 function App() {
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null)
   const [showHistory, setShowHistory] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
-  const [showPolish, setShowPolish] = useState(false)
-  const [showTest, setShowTest] = useState(false)
+  const [activeTab, setActiveTab] = useState<TabType>('shortcut')
   const [state, setState] = useState<SpeechTideState>(INITIAL_STATE)
   const [shortcut, setShortcut] = useState<ShortcutConfig | null>(null)
   const [isRecordingShortcut, setIsRecordingShortcut] = useState(false)
@@ -87,7 +93,15 @@ function App() {
   }, [])
 
   useEffect(() => {
-    const dispose = window.speech.onStateChange((next) => setState(next))
+    const dispose = window.speech.onStateChange((next) => {
+      setState((prev) => {
+        // Clear test result when new real transcript arrives
+        if (next.transcript && next.transcript !== prev.transcript) {
+          setTestResult(null)
+        }
+        return next
+      })
+    })
     window.speech.getState().then((snapshot) => setState(snapshot))
     window.speech.getSettings().then((s) => {
       setShortcut(s.shortcut)
@@ -141,6 +155,11 @@ function App() {
     return result
   }, [])
 
+  const handleModeChange = useCallback((mode: ShortcutMode) => {
+    if (!shortcut) return
+    handleShortcutChange({ ...shortcut, mode })
+  }, [shortcut, handleShortcutChange])
+
   const handlePolishConfigChange = useCallback(async (config: PolishConfig) => {
     const result = await window.speech.updateSettings({ polish: config })
     if (result.success) setPolishConfig(config)
@@ -190,7 +209,6 @@ function App() {
           language: result.data.language,
         })
       } else if (!result.success) {
-        // 显示错误提示
         setTestResult({ text: `测试失败: ${result.error || '未知错误'}`, duration: 0, processingTime: 0, modelId: '', language: '' })
       }
     } catch {
@@ -212,7 +230,6 @@ function App() {
         setIsPlaying(false)
         setPlayError(result.error || 'Failed to play audio')
       }
-      // Success: wait for onPlayAudio event to handle state
     } catch (err) {
       setIsPlaying(false)
       setPlayError(err instanceof Error ? err.message : 'Playback failed')
@@ -248,285 +265,346 @@ function App() {
   }
 
   if (showHistory) {
-    return <HistoryPanel onBack={() => {
-      setShowHistory(false)
-      window.speech.setPanelMode('main')
-    }} />
+    return <HistoryPanel onBack={() => setShowHistory(false)} />
   }
 
   const currentStatus = STATUS_CONFIG[state.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.idle
 
   return (
     <div className="h-full flex flex-col bg-[hsl(var(--background))]">
-      {/* macOS 交通灯安全区 */}
-      <div className="h-7 flex-shrink-0" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
-
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 pb-3 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="text-lg font-semibold text-[hsl(var(--text-primary))]">SpeechTide</span>
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[hsl(var(--muted))]">
+      {/* macOS 交通灯安全区 + 标题栏 */}
+      <header
+        className="h-10 flex-shrink-0 flex items-center justify-between px-4 border-b border-[hsl(var(--border))]"
+        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      >
+        <div className="flex items-center gap-3 pl-16">
+          <span className="text-base font-semibold text-[hsl(var(--text-primary))]">SpeechTide</span>
+        </div>
+        <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[hsl(var(--muted))]">
             <span className={`status-dot ${currentStatus.class}`} />
             <span className="text-xs text-[hsl(var(--text-secondary))]">{currentStatus.label}</span>
           </div>
         </div>
-        <button
-          onClick={() => {
-            setShowHistory(true)
-            setShowSettings(false)
-            setShowTest(false)
-            window.speech.setPanelMode('history')
-          }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[hsl(var(--text-secondary))] hover:bg-[hsl(var(--muted))] transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span className="text-sm">历史</span>
-        </button>
       </header>
 
-      {/* Main content */}
-      <main className="px-4">
-        {/* Transcript Card - Hero */}
-        <div className="transcript-card mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-[hsl(var(--text-secondary))]">转录结果</span>
-            <button
-              onClick={() => state.transcript && copyToClipboard(state.transcript)}
-              disabled={!state.transcript}
-              className={`text-xs px-2.5 py-1 rounded-md transition-all ${
-                copySuccess
-                  ? 'text-emerald-600 bg-emerald-50'
-                  : state.transcript
-                    ? 'text-[hsl(var(--primary))] hover:bg-[hsl(var(--muted))]'
-                    : 'text-[hsl(var(--text-tertiary))] cursor-not-allowed'
-              }`}
-            >
-              {copySuccess ? '已复制 ✓' : '复制'}
-            </button>
-          </div>
-          <div className="h-[100px] overflow-y-auto">
-            {state.transcript ? (
-              <p className="text-sm text-[hsl(var(--text-primary))] leading-relaxed whitespace-pre-wrap">
-                {state.transcript}
-              </p>
-            ) : (
-              <p className="text-sm text-[hsl(var(--text-tertiary))] text-center py-2">
-                {state.status === 'recording' ? '正在录音...' :
-                 state.status === 'transcribing' ? '正在转写...' :
-                 state.status === 'polishing' ? '正在润色...' :
-                 '按下快捷键开始录音'}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Shortcut Bar */}
-        <div className="mb-3">
-          <div className="divider mb-3" />
-          <div className="flex items-center justify-between gap-3">
-            <input
-              ref={shortcutInputRef}
-              type="text"
-              readOnly
-              value={isRecordingShortcut ? '按下快捷键...' : (shortcut?.accelerator || '')}
-              onKeyDown={handleKeyDown}
-              onKeyUp={handleKeyUp}
-              onFocus={() => {
-                setIsRecordingShortcut(true)
-                window.speech.setShortcutRecording(true)
-              }}
-              onBlur={() => {
-                setIsRecordingShortcut(false)
-                window.speech.setShortcutRecording(false)
-              }}
-              className={`flex-1 px-3 py-2 text-sm font-mono text-center rounded-lg cursor-pointer transition-all ${
-                isRecordingShortcut
-                  ? 'bg-[hsl(var(--primary))] text-white'
-                  : 'bg-[hsl(var(--muted))] text-[hsl(var(--text-primary))] hover:bg-[hsl(var(--secondary))]'
-              }`}
-              placeholder="点击设置"
-            />
-            <span className="text-xs text-[hsl(var(--text-tertiary))] whitespace-nowrap">
-              短按润色 · 长按直出
-            </span>
-          </div>
-        </div>
-
-        {/* Error Display */}
-        {state.error && (
-          <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl">
-            <p className="text-sm text-rose-700">{state.error}</p>
-          </div>
-        )}
-      </main>
-
-      {/* Bottom Section */}
-      <div className="flex-shrink-0">
-        {/* Footer Bar */}
-        <div className="px-4 py-2.5 flex items-center justify-between border-t border-[hsl(var(--border))]">
-          <UpdateIndicator />
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => {
-                const newShowSettings = !showSettings
-                setShowSettings(newShowSettings)
-                setShowPolish(false)
-                setShowTest(false)
-                window.speech.setPanelMode(newShowSettings ? 'withSettings' : 'main')
-              }}
-              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                showSettings
-                  ? 'bg-[hsl(var(--primary))] text-white'
-                  : 'text-[hsl(var(--text-secondary))] hover:bg-[hsl(var(--muted))]'
-              }`}
-            >
-              设置
-            </button>
-            <button
-              onClick={() => {
-                const newShowPolish = !showPolish
-                setShowPolish(newShowPolish)
-                setShowSettings(false)
-                setShowTest(false)
-                window.speech.setPanelMode(newShowPolish ? 'withPolish' : 'main')
-              }}
-              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                showPolish
-                  ? 'bg-[hsl(var(--primary))] text-white'
-                  : 'text-[hsl(var(--text-secondary))] hover:bg-[hsl(var(--muted))]'
-              }`}
-            >
-              AI 润色
-            </button>
-            <button
-              onClick={() => {
-                const newShowTest = !showTest
-                setShowTest(newShowTest)
-                setShowSettings(false)
-                setShowPolish(false)
-                window.speech.setPanelMode(newShowTest ? 'withTest' : 'main')
-              }}
-              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                showTest
-                  ? 'bg-[hsl(var(--primary))] text-white'
-                  : 'text-[hsl(var(--text-secondary))] hover:bg-[hsl(var(--muted))]'
-              }`}
-            >
-              测试
-            </button>
-          </div>
-        </div>
-
-        {/* Settings Panel (Below buttons) */}
-        {showSettings && (
-          <div className="px-4 py-3 bg-[hsl(var(--card))] border-t border-[hsl(var(--border))]">
-            <div className="space-y-3">
-              <SettingToggle
-                label="禁用自动插入"
-                checked={clipboardMode}
-                onChange={(v) => updateSetting('clipboardMode', v)}
-              />
-              <SettingToggle
-                label="启动时显示面板"
-                checked={autoShowOnStart}
-                onChange={(v) => updateSetting('autoShowOnStart', v)}
-              />
-              <SettingToggle
-                label="接收测试版更新"
-                checked={allowBetaUpdates}
-                onChange={(v) => updateSetting('allowBetaUpdates', v)}
-              />
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[hsl(var(--text-secondary))]">模型缓存</span>
-                <select
-                  value={cacheTTLMinutes}
-                  onChange={(e) => updateSetting('cacheTTLMinutes', Number(e.target.value))}
-                  className="text-sm bg-[hsl(var(--muted))] border-none rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]"
-                >
-                  <option value={5}>5 分钟</option>
-                  <option value={15}>15 分钟</option>
-                  <option value={30}>30 分钟</option>
-                  <option value={60}>1 小时</option>
-                  <option value={0}>永不卸载</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* AI Polish Panel (Below buttons) */}
-        {showPolish && (
-          <div className="px-4 py-3 bg-[hsl(var(--card))] border-t border-[hsl(var(--border))]">
-            <PolishSettings
-              config={polishConfig}
-              onConfigChange={handlePolishConfigChange}
-            />
-          </div>
-        )}
-
-        {/* Test Panel (Below buttons) */}
-        {showTest && (
-          <div className="px-4 py-3 bg-[hsl(var(--card))] border-t border-[hsl(var(--border))]">
+      {/* 双栏主体 */}
+      <div className="flex-1 flex min-h-0">
+        {/* 左栏 - 转录结果 */}
+        <div className="w-[300px] flex-shrink-0 flex flex-col border-r border-[hsl(var(--border))]">
+          {/* 转录结果卡片 */}
+          <div className="flex-1 p-4 flex flex-col min-h-0">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-[hsl(var(--text-secondary))]">测试转录</span>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-[hsl(var(--text-secondary))]">
+                  {testResult ? '测试结果' : '转录结果'}
+                </span>
+                {testResult && testResult.processingTime > 0 && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                    ✓ {(testResult.processingTime / 1000).toFixed(1)}s
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1">
+                {testResult && (
+                  <button
+                    onClick={() => setTestResult(null)}
+                    className="text-xs px-2 py-1 rounded-md text-[hsl(var(--text-tertiary))] hover:bg-[hsl(var(--muted))] transition-all"
+                  >
+                    清除
+                  </button>
+                )}
                 <button
-                  onClick={playTestAudio}
-                  disabled={isPlaying}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-[hsl(var(--muted))] text-[hsl(var(--text-secondary))] hover:bg-[hsl(var(--secondary))] disabled:opacity-50 transition-colors"
+                  onClick={() => {
+                    const text = testResult?.text || state.transcript
+                    if (text) copyToClipboard(text)
+                  }}
+                  disabled={!testResult?.text && !state.transcript}
+                  className={`text-xs px-2.5 py-1 rounded-md transition-all ${
+                    copySuccess
+                      ? 'text-emerald-600 bg-emerald-50'
+                      : (testResult?.text || state.transcript)
+                        ? 'text-[hsl(var(--primary))] hover:bg-[hsl(var(--muted))]'
+                        : 'text-[hsl(var(--text-tertiary))] cursor-not-allowed'
+                  }`}
                 >
-                  {isPlaying ? '播放中...' : '▶ 试听'}
-                </button>
-                <button
-                  onClick={runTest}
-                  disabled={testRunning || state.status === 'recording' || state.status === 'transcribing'}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-[hsl(var(--primary))] text-white hover:opacity-90 disabled:opacity-50 transition-colors"
-                >
-                  {testRunning ? '测试中...' : '开始测试'}
+                  {copySuccess ? '已复制 ✓' : '复制'}
                 </button>
               </div>
             </div>
-            {playError && (
-              <div className="mb-3 p-2 bg-rose-50 border border-rose-200 rounded-lg">
+            <div className="flex-1 overflow-y-auto transcript-card">
+              {testResult ? (
+                <div className="p-3">
+                  {testResult.processingTime > 0 ? (
+                    <p className="text-sm text-[hsl(var(--text-primary))] leading-relaxed whitespace-pre-wrap">
+                      {testResult.text}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-rose-600">{testResult.text}</p>
+                  )}
+                </div>
+              ) : state.transcript ? (
+                <p className="text-sm text-[hsl(var(--text-primary))] leading-relaxed whitespace-pre-wrap p-3">
+                  {state.transcript}
+                </p>
+              ) : (
+                <div className="h-full flex items-center justify-center">
+                  <p className="text-sm text-[hsl(var(--text-tertiary))] text-center">
+                    {testRunning ? '测试中...' :
+                     state.status === 'recording' ? '正在录音...' :
+                     state.status === 'transcribing' ? '正在转写...' :
+                     '按下快捷键开始录音'}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 快捷键显示区 */}
+          <div className="p-4 border-t border-[hsl(var(--border))]">
+            {playError ? (
+              <div className="text-center">
                 <p className="text-xs text-rose-600">{playError}</p>
               </div>
-            )}
-            {testResult ? (
-              <div className="p-3 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${testResult.processingTime > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                    {testResult.processingTime > 0 ? `${(testResult.processingTime / 1000).toFixed(1)}s` : 'Error'}
-                  </span>
-                  {testResult.modelId && <span className="text-xs text-[hsl(var(--text-tertiary))]">{testResult.modelId}</span>}
-                </div>
-                <div className="max-h-[80px] overflow-y-auto">
-                  <p className="text-sm text-[hsl(var(--text-primary))]">{testResult.text || '无结果'}</p>
-                </div>
-              </div>
             ) : (
-              <p className="text-sm text-[hsl(var(--text-tertiary))] text-center py-2">点击测试验证模型</p>
+              <div className="text-center">
+                <span className="text-lg font-mono text-[hsl(var(--text-primary))]">
+                  {shortcut?.accelerator || '未设置'}
+                </span>
+                <p className="text-xs text-[hsl(var(--text-tertiary))] mt-1">
+                  💡 按下快捷键开始录音
+                </p>
+              </div>
             )}
           </div>
-        )}
+
+          {/* 底部工具栏 */}
+          <div className="px-4 py-3 border-t border-[hsl(var(--border))] flex items-center justify-between">
+            <UpdateIndicator />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={playTestAudio}
+                disabled={isPlaying}
+                className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg text-[hsl(var(--text-secondary))] hover:bg-[hsl(var(--muted))] disabled:opacity-50 transition-colors"
+              >
+                {isPlaying ? '▶ 播放中' : '▶ 试听'}
+              </button>
+              <button
+                onClick={runTest}
+                disabled={testRunning || state.status === 'recording' || state.status === 'transcribing'}
+                className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg text-[hsl(var(--text-secondary))] hover:bg-[hsl(var(--muted))] disabled:opacity-50 transition-colors"
+              >
+                🎤 {testRunning ? '测试中' : '测试'}
+              </button>
+              <button
+                onClick={() => setShowHistory(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[hsl(var(--text-secondary))] hover:bg-[hsl(var(--muted))] transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-xs">历史</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 右栏 - 标签页 */}
+        <div className="flex-1 flex flex-col min-h-0">
+          {/* 标签栏 */}
+          <div className="flex-shrink-0 px-4 pt-3 pb-0 flex gap-1 border-b border-[hsl(var(--border))]">
+            <button
+              onClick={() => setActiveTab('shortcut')}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors relative ${
+                activeTab === 'shortcut'
+                  ? 'text-[hsl(var(--primary))] bg-[hsl(var(--card))]'
+                  : 'text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] hover:bg-[hsl(var(--muted))]'
+              }`}
+            >
+              ⌨️ 快捷键
+              {activeTab === 'shortcut' && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[hsl(var(--primary))]" />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors relative ${
+                activeTab === 'settings'
+                  ? 'text-[hsl(var(--primary))] bg-[hsl(var(--card))]'
+                  : 'text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] hover:bg-[hsl(var(--muted))]'
+              }`}
+            >
+              ⚙️ 设置
+              {activeTab === 'settings' && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[hsl(var(--primary))]" />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('polish')}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors relative ${
+                activeTab === 'polish'
+                  ? 'text-[hsl(var(--primary))] bg-[hsl(var(--card))]'
+                  : 'text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] hover:bg-[hsl(var(--muted))]'
+              }`}
+            >
+              ✨ AI 润色
+              {activeTab === 'polish' && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[hsl(var(--primary))]" />
+              )}
+            </button>
+          </div>
+
+          {/* 标签页内容 */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {activeTab === 'shortcut' && (
+              <div className="space-y-6">
+                {/* 快捷键设置 */}
+                <div>
+                  <label className="text-sm font-medium text-[hsl(var(--text-primary))] block mb-2">
+                    当前快捷键
+                  </label>
+                  <input
+                    ref={shortcutInputRef}
+                    type="text"
+                    readOnly
+                    value={isRecordingShortcut ? '按下快捷键...' : (shortcut?.accelerator || '')}
+                    onKeyDown={handleKeyDown}
+                    onKeyUp={handleKeyUp}
+                    onFocus={() => {
+                      setIsRecordingShortcut(true)
+                      window.speech.setShortcutRecording(true)
+                    }}
+                    onBlur={() => {
+                      setIsRecordingShortcut(false)
+                      window.speech.setShortcutRecording(false)
+                    }}
+                    className={`w-full px-4 py-3 text-center text-base font-mono rounded-lg cursor-pointer transition-all ${
+                      isRecordingShortcut
+                        ? 'bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))] border-2 border-[hsl(var(--primary))]'
+                        : 'bg-[hsl(var(--muted))] text-[hsl(var(--text-primary))] hover:bg-[hsl(var(--secondary))] border-2 border-transparent'
+                    }`}
+                    placeholder="点击设置"
+                  />
+                  <p className="text-xs text-[hsl(var(--text-tertiary))] text-center mt-2">
+                    点击上方录制新快捷键
+                  </p>
+                </div>
+
+                {/* 触发模式 */}
+                <div>
+                  <label className="text-sm font-medium text-[hsl(var(--text-primary))] block mb-2">
+                    触发模式
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {MODE_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => handleModeChange(option.value)}
+                        className={`px-3 py-2.5 text-sm rounded-lg border transition-all ${
+                          shortcut?.mode === option.value
+                            ? 'bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))] border-[hsl(var(--primary))]'
+                            : 'bg-[hsl(var(--card))] text-[hsl(var(--text-secondary))] border-[hsl(var(--border))] hover:border-[hsl(var(--primary))]'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-[hsl(var(--text-tertiary))] text-center mt-2">
+                    {shortcut?.mode === 'toggle' ? '按一次开始，再按一次停止' :
+                     shortcut?.mode === 'hold' ? '按住录音，松开停止' :
+                     '短按切换，长按持续'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'settings' && (
+              <div className="space-y-4">
+                <SettingToggle
+                  label="禁用自动插入"
+                  description="转录完成后只复制到剪贴板，不自动输入"
+                  checked={clipboardMode}
+                  onChange={(v) => updateSetting('clipboardMode', v)}
+                />
+                <SettingToggle
+                  label="启动时显示面板"
+                  description="应用启动后自动显示主面板"
+                  checked={autoShowOnStart}
+                  onChange={(v) => updateSetting('autoShowOnStart', v)}
+                />
+                <SettingToggle
+                  label="接收测试版更新"
+                  description="测试版可能包含未完善的功能"
+                  checked={allowBetaUpdates}
+                  onChange={(v) => updateSetting('allowBetaUpdates', v)}
+                />
+                <div className="border-t border-[hsl(var(--border))] pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-sm text-[hsl(var(--text-primary))]">模型缓存时间</span>
+                      <p className="text-xs text-[hsl(var(--text-tertiary))] mt-0.5">
+                        闲置后自动卸载模型以释放内存
+                      </p>
+                    </div>
+                    <select
+                      value={cacheTTLMinutes}
+                      onChange={(e) => updateSetting('cacheTTLMinutes', Number(e.target.value))}
+                      className="text-sm bg-[hsl(var(--muted))] border-none rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]"
+                    >
+                      <option value={5}>5 分钟</option>
+                      <option value={15}>15 分钟</option>
+                      <option value={30}>30 分钟</option>
+                      <option value={60}>1 小时</option>
+                      <option value={0}>永不卸载</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Error Display */}
+                {state.error && (
+                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl">
+                    <p className="text-sm text-rose-700">{state.error}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'polish' && (
+              <PolishSettings
+                config={polishConfig}
+                onConfigChange={handlePolishConfigChange}
+              />
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
 }
 
 /**
- * Toggle switch component
+ * Toggle switch component with description
  */
-function SettingToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+function SettingToggle({ label, description, checked, onChange }: {
+  label: string
+  description?: string
+  checked: boolean
+  onChange: (v: boolean) => void
+}) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-[hsl(var(--text-secondary))]">{label}</span>
+    <div className="flex items-start justify-between gap-4 py-2">
+      <div className="flex-1">
+        <span className="text-sm text-[hsl(var(--text-primary))]">{label}</span>
+        {description && (
+          <p className="text-xs text-[hsl(var(--text-tertiary))] mt-0.5">{description}</p>
+        )}
+      </div>
       <button
         onClick={() => onChange(!checked)}
-        className={`relative w-10 h-6 rounded-full transition-colors ${checked ? 'bg-[hsl(var(--primary))]' : 'bg-[hsl(var(--muted))]'}`}
+        className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${checked ? 'bg-[hsl(var(--primary))]' : 'bg-[hsl(var(--muted))]'}`}
       >
-        <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? 'left-5' : 'left-1'}`} />
+        <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? 'left-6' : 'left-1'}`} />
       </button>
     </div>
   )

@@ -269,7 +269,6 @@ export class AppController {
       testTranscription: () => this.runTestTranscription(),
       playTestAudio: () => this.playTestAudio(),
       setShortcutRecording: (recording) => this.setShortcutRecording(recording),
-      setPanelMode: (mode) => this.windowService?.setPanelMode(mode),
       getHistoryStats: async (options) => {
         try {
           const maxAgeDays = options?.maxAgeDays ?? 0

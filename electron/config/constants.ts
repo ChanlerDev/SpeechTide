@@ -12,9 +12,8 @@ import type { SpeechFlowStatus, ShortcutConfig } from '../../shared/app-state'
  */
 export const STATUS_HINT: Record<SpeechFlowStatus, string> = {
   idle: '待命，可通过快捷键开始录音',
-  recording: '录音中，松开快捷键停止',
+  recording: '录音中，松开快捷键或再按一次可停止',
   transcribing: '转写中，请稍候……',
-  polishing: 'AI 润色中……',
   ready: '转写完成，文本已准备就绪',
   error: '发生异常，请重试或查看日志',
 } as const
@@ -27,7 +26,6 @@ export const STATUS_LABEL: Record<SpeechFlowStatus, string> = {
   idle: '待命',
   recording: '录音中',
   transcribing: '转写中',
-  polishing: '润色中',
   ready: '完成',
   error: '异常',
 } as const
@@ -38,7 +36,7 @@ export const STATUS_LABEL: Record<SpeechFlowStatus, string> = {
 export const DEFAULT_SHORTCUT: ShortcutConfig = {
   accelerator: 'MetaRight',
   description: '切换录音流程',
-  holdThresholdMs: 300,
+  mode: 'toggle',
 } as const
 
 /**
@@ -60,35 +58,19 @@ export const APP_CONSTANTS = {
 } as const
 
 /**
- * 窗口配置
+ * 窗口配置 - 双栏布局
  */
 export const WINDOW_CONFIG = {
-  /** 基础宽度 */
-  width: 360,
-  /** 基础高度（主面板折叠状态） */
-  height: 370,
+  /** 基础宽度（左栏300 + 右栏380） */
+  width: 680,
+  /** 基础高度 */
+  height: 540,
   /** 最小宽度 */
-  minWidth: 340,
+  minWidth: 600,
   /** 最小高度 */
-  minHeight: 320,
+  minHeight: 480,
   /** 最大宽度 */
-  maxWidth: 420,
-  /** 最大高度（历史面板或展开状态） */
-  maxHeight: 660,
-} as const
-
-/**
- * 面板高度预设
- */
-export const PANEL_HEIGHTS = {
-  /** 主面板基础高度 */
-  main: 370,
-  /** 设置面板展开时的高度（4个选项） */
-  withSettings: 540,
-  /** AI 润色面板展开时的高度 */
-  withPolish: 580,
-  /** 测试面板展开时的高度（按钮+结果） */
-  withTest: 540,
-  /** 历史面板高度 */
-  history: 580,
+  maxWidth: 800,
+  /** 最大高度 */
+  maxHeight: 700,
 } as const

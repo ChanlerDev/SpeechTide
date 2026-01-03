@@ -48,6 +48,9 @@ AGENTS.md
 # AI communication notes
 notes/
 
+# Task documents (local only)
+docs/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
