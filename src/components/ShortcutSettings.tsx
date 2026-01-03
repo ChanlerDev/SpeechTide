@@ -21,7 +21,7 @@
  */
 
 import { useCallback, useRef, type KeyboardEvent } from 'react'
-import type { ShortcutConfig, ShortcutMode } from '../../shared/app-state'
+import type { ShortcutConfig } from '../../shared/app-state'
 
 interface ShortcutSettingsProps {
   shortcut: ShortcutConfig | null
@@ -30,14 +30,9 @@ interface ShortcutSettingsProps {
   onRecordingChange: (recording: boolean) => void
 }
 
-const MODE_OPTIONS: { value: ShortcutMode; label: string; description: string }[] = [
-  { value: 'toggle', label: '点击', description: '按一次开始，再按一次停止' },
-  { value: 'hold', label: '长按', description: '按住录音，松开停止' },
-  { value: 'hybrid', label: '混合', description: '短按切换，长按持续' },
-]
-
 /**
  * 快捷键设置组件
+ * 统一 hybrid 模式：短按 = AI 润色输出，长按 = 快速输出
  */
 export const ShortcutSettings = ({
   shortcut,
@@ -103,22 +98,6 @@ export const ShortcutSettings = ({
     onRecordingChange(false)
   }
 
-  const handleModeChange = useCallback(
-    (mode: ShortcutMode) => {
-      if (!shortcut) return
-      const newShortcut = { ...shortcut, mode }
-      onShortcutChange(newShortcut).then((result) => {
-        if (!result.success) {
-          alert('模式切换失败: ' + result.error)
-        }
-      })
-    },
-    [shortcut, onShortcutChange]
-  )
-
-  const currentMode = shortcut?.mode || 'toggle'
-  const currentModeOption = MODE_OPTIONS.find(opt => opt.value === currentMode)
-
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 space-y-3">
       {/* 快捷键输入 */}
@@ -142,28 +121,10 @@ export const ShortcutSettings = ({
         />
       </div>
 
-      {/* 触发模式选择 */}
-      <div>
-        <span className="text-sm font-medium text-gray-700">触发模式</span>
-        <div className="flex gap-2 mt-2">
-          {MODE_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => handleModeChange(option.value)}
-              className={`flex-1 px-2 py-1.5 text-xs rounded-lg border transition-all ${
-                currentMode === option.value
-                  ? 'bg-orange-50 border-orange-300 text-orange-700 font-medium'
-                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-        <p className="text-xs text-gray-400 mt-2 text-center">
-          {currentModeOption?.description}
-        </p>
-      </div>
+      {/* 行为说明 */}
+      <p className="text-xs text-gray-400 text-center">
+        短按 = AI 润色输出 · 长按 = 快速输出
+      </p>
     </div>
   )
 }

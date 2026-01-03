@@ -14,6 +14,7 @@ export const STATUS_HINT: Record<SpeechFlowStatus, string> = {
   idle: '待命，可通过快捷键开始录音',
   recording: '录音中，松开快捷键或再按一次可停止',
   transcribing: '转写中，请稍候……',
+  polishing: '润色中，正在优化文本……',
   ready: '转写完成，文本已准备就绪',
   error: '发生异常，请重试或查看日志',
 } as const
@@ -26,17 +27,19 @@ export const STATUS_LABEL: Record<SpeechFlowStatus, string> = {
   idle: '待命',
   recording: '录音中',
   transcribing: '转写中',
+  polishing: '润色中',
   ready: '完成',
   error: '异常',
 } as const
 
 /**
  * 默认快捷键配置
+ * 统一使用 hybrid 模式：短按 = AI 润色，长按 = 快速输出
  */
 export const DEFAULT_SHORTCUT: ShortcutConfig = {
   accelerator: 'MetaRight',
   description: '切换录音流程',
-  mode: 'toggle',
+  holdThresholdMs: 300,  // 长按判定阈值
 } as const
 
 /**

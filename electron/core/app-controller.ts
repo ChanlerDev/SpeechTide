@@ -8,7 +8,7 @@ import { app, clipboard } from 'electron'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
-import type { SpeechTideState, TranscriptionMeta } from '../../shared/app-state'
+import type { SpeechTideState, TranscriptionMeta, TriggerType } from '../../shared/app-state'
 import type { ConversationRecord } from '../../shared/conversation'
 import { StateMachine } from './state-machine'
 import { WindowService } from '../services/window-service'
@@ -26,6 +26,7 @@ import { createModuleLogger } from '../utils/logger'
 import { metrics } from '../utils/metrics'
 import { onboardingService } from '../services/onboarding-service'
 import { updateService } from '../services/update-service'
+import { PolishEngine } from '../services/polish-engine'
 
 const logger = createModuleLogger('app-controller')
 
@@ -50,6 +51,7 @@ export class AppController {
   private transcriber: Transcriber | null = null  // 懒加载，支持动态卸载
   private readonly conversationStore = new ConversationStore(this.conversationsDir)
   private readonly appleScriptInserter = new AppleScriptTextInserter()
+  private polishEngine: PolishEngine | null = null  // 润色引擎
 
   // 状态
   private initialized = false
@@ -63,6 +65,10 @@ export class AppController {
     fs.mkdirSync(this.supportDir, { recursive: true })
     fs.mkdirSync(this.conversationsDir, { recursive: true })
     fs.mkdirSync(path.dirname(this.testAudioPath), { recursive: true })
+    // 初始化润色引擎
+    if (this.settings.polish) {
+      this.polishEngine = new PolishEngine(this.settings.polish)
+    }
   }
 
   /**
@@ -230,6 +236,16 @@ export class AppController {
           // 如果 beta 更新设置变更，更新 UpdateService
           if (settings.allowBetaUpdates !== undefined) {
             updateService.setAllowBetaUpdates(settings.allowBetaUpdates)
+          }
+
+          // 如果润色配置变更，更新 PolishEngine
+          if (settings.polish !== undefined) {
+            if (!this.polishEngine) {
+              this.polishEngine = new PolishEngine(settings.polish)
+            } else {
+              this.polishEngine.updateConfig(settings.polish)
+            }
+            logger.info('润色配置已更新', { enabled: settings.polish.enabled, provider: settings.polish.provider })
           }
 
           return { success: true }
@@ -432,8 +448,10 @@ export class AppController {
 
   /**
    * 停止录音
+   * @param message 状态消息
+   * @param triggerType 触发类型：'tap' = 短按（AI润色），'hold' = 长按（直接输出）
    */
-  private async stopRecording(message?: string): Promise<void> {
+  private async stopRecording(message?: string, triggerType: TriggerType = 'hold'): Promise<void> {
     if (!this.activeRecording) return
 
     const { handle, sessionId, timeout, recordingTimer } = this.activeRecording
@@ -445,11 +463,11 @@ export class AppController {
 
     const meta: TranscriptionMeta = { sessionId }
     this.stateMachine.setTranscribing(message, meta)
-    logger.info('停止录音，开始转写', { sessionId })
+    logger.info('停止录音，开始转写', { sessionId, triggerType })
 
     const transcriptionTimer = metrics.startTimer('transcription', sessionId)
     let recordingResult: RecordingResult | undefined
-    
+
     try {
       recordingResult = await handle.stop()
       const transcriber = this.ensureTranscriber()
@@ -460,13 +478,38 @@ export class AppController {
         modelId: transcription.modelId,
       })
 
+      let finalText = transcription.text
+      let polished = false
+
+      // 短按 + 润色已启用 + 配置有效 → 触发润色
+      const shouldPolish = triggerType === 'tap' && this.polishEngine?.isConfigValid()
+      if (shouldPolish) {
+        const nextMeta: TranscriptionMeta = {
+          sessionId,
+          durationMs: transcription.durationMs,
+          modelId: transcription.modelId,
+          language: transcription.language,
+        }
+        this.stateMachine.setPolishing(undefined, nextMeta)
+        logger.info('开始 AI 润色', { sessionId })
+
+        const polishResult = await this.polishEngine!.polish(transcription.text)
+        if (polishResult.success && polishResult.text) {
+          finalText = polishResult.text
+          polished = true
+          logger.info('AI 润色完成', { sessionId, durationMs: polishResult.durationMs })
+        } else {
+          logger.warn('AI 润色失败，回退到原始文本', { error: polishResult.error })
+        }
+      }
+
       const record: ConversationRecord = {
         id: sessionId,
         startedAt: recordingResult.startedAt,
         finishedAt: Date.now(),
         durationMs: transcription.durationMs,
         audioPath: recordingResult.audioPath,
-        transcript: transcription.text,
+        transcript: finalText,
         modelId: transcription.modelId,
         language: transcription.language,
       }
@@ -475,12 +518,12 @@ export class AppController {
       const nextMeta: TranscriptionMeta = {
         sessionId,
         durationMs: transcription.durationMs,
-        modelId: transcription.modelId,
+        modelId: polished ? `${transcription.modelId} + AI` : transcription.modelId,
         language: transcription.language,
       }
 
-      this.insertTextAtCursor(transcription.text)
-      this.stateMachine.setReady(transcription.text, nextMeta)
+      this.insertTextAtCursor(finalText)
+      this.stateMachine.setReady(finalText, nextMeta)
       this.scheduleIdle()
     } catch (error) {
       if (recordingResult) {
@@ -847,8 +890,8 @@ export class AppController {
 
     // 权限已授予，启动键盘钩子
     const started = this.keyboardHookService.start({
-      onTrigger: () => this.handleToggleRecording(),
-      onRelease: () => this.stopRecording('松开按键，停止录音'),
+      onRecordingStart: () => this.startRecording(),
+      onRecordingStop: (triggerType) => this.stopRecording('松开按键，停止录音', triggerType),
     })
 
     if (started) {

@@ -13,7 +13,7 @@ import {
 const DEFAULT_SHORTCUT: ShortcutConfig = {
   accelerator: 'MetaRight',
   description: '切换录音流程',
-  mode: 'toggle',
+  holdThresholdMs: 300,
 }
 
 export interface RecorderConfig {
@@ -176,6 +176,37 @@ export interface AppSettings {
   cacheTTLMinutes: number
   /** 是否接收测试版更新（beta 版本） */
   allowBetaUpdates: boolean
+  /** AI 润色配置 */
+  polish: PolishConfig
+}
+
+/**
+ * AI 润色配置
+ */
+export interface PolishConfig {
+  /** 是否启用润色 */
+  enabled: boolean
+  /** API 提供商 */
+  provider: 'openai' | 'deepseek'
+  /** API 密钥 */
+  apiKey: string
+  /** 模型 ID */
+  modelId: string
+  /** 系统提示词 */
+  systemPrompt: string
+  /** 超时时间（毫秒） */
+  timeoutMs: number
+  /** 自定义 base URL（可选，用于自部署或代理） */
+  baseUrl?: string
+}
+
+const DEFAULT_POLISH_CONFIG: PolishConfig = {
+  enabled: false,
+  provider: 'openai',
+  apiKey: '',
+  modelId: 'gpt-4o-mini',
+  systemPrompt: '你是一个语音转文字的润色助手。用户输入的是语音识别后的原始文本，可能包含口语化表达、重复、填充词等。请将其润色为流畅、简洁的书面文本，保持原意不变。只输出润色后的文本，不要添加任何解释或额外内容。',
+  timeoutMs: 30000,
 }
 
 export function loadAppSettings(): AppSettings {
@@ -187,6 +218,7 @@ export function loadAppSettings(): AppSettings {
     autoShowOnStart: false,
     cacheTTLMinutes: 30, // 默认 30 分钟
     allowBetaUpdates: false, // 默认不接收测试版
+    polish: DEFAULT_POLISH_CONFIG,
   }
   return loadJsonFile<AppSettings>('settings.json', defaults)
 }

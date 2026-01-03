@@ -4,9 +4,10 @@
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import type { SpeechTideState, ShortcutConfig, ShortcutMode } from '../shared/app-state'
+import type { SpeechTideState, ShortcutConfig } from '../shared/app-state'
 import { Onboarding } from './components/Onboarding'
 import { HistoryPanel } from './components/HistoryPanel'
+import { PolishSettings } from './components/PolishSettings'
 import { useNativeRecorder } from './hooks/useNativeRecorder'
 
 const INITIAL_STATE: SpeechTideState = {
@@ -23,11 +24,16 @@ interface TestResult {
   language?: string
 }
 
-const MODE_OPTIONS: { value: ShortcutMode; label: string }[] = [
-  { value: 'toggle', label: '点击' },
-  { value: 'hold', label: '长按' },
-  { value: 'hybrid', label: '混合' },
-]
+interface PolishConfig {
+  enabled: boolean
+  provider: 'openai' | 'deepseek'
+  apiKey: string
+  modelId: string
+  systemPrompt: string
+  timeoutMs: number
+  baseUrl?: string
+}
+
 
 /**
  * 状态配置
@@ -36,11 +42,12 @@ const STATUS_CONFIG = {
   idle: { label: '就绪', class: 'idle' },
   recording: { label: '录音中', class: 'recording' },
   transcribing: { label: '转写中', class: 'transcribing' },
+  polishing: { label: '润色中', class: 'transcribing' },
   ready: { label: '完成', class: 'idle' },
   error: { label: '错误', class: 'recording' },
 } as const
 
-type TabType = 'shortcut' | 'settings'
+type TabType = 'shortcut' | 'settings' | 'polish'
 
 /**
  * 主应用组件 - 双栏布局设计
@@ -60,6 +67,7 @@ function App() {
   const [autoShowOnStart, setAutoShowOnStart] = useState(false)
   const [cacheTTLMinutes, setCacheTTLMinutes] = useState(30)
   const [allowBetaUpdates, setAllowBetaUpdates] = useState(false)
+  const [polishConfig, setPolishConfig] = useState<PolishConfig | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const shortcutInputRef = useRef<HTMLInputElement>(null)
   const pressedKeysRef = useRef<Set<string>>(new Set())
@@ -96,6 +104,7 @@ function App() {
       setAutoShowOnStart(s.autoShowOnStart)
       setCacheTTLMinutes(Number.isFinite(s.cacheTTLMinutes) ? s.cacheTTLMinutes : 30)
       setAllowBetaUpdates(s.allowBetaUpdates ?? false)
+      if (s.polish) setPolishConfig(s.polish)
     })
 
     const disposeAudio = window.speech.onPlayAudio((audioPath) => {
@@ -141,10 +150,12 @@ function App() {
     return result
   }, [])
 
-  const handleModeChange = useCallback((mode: ShortcutMode) => {
-    if (!shortcut) return
-    handleShortcutChange({ ...shortcut, mode })
-  }, [shortcut, handleShortcutChange])
+
+  const handlePolishConfigChange = useCallback(async (config: PolishConfig) => {
+    const result = await window.speech.updateSettings({ polish: config })
+    if (result.success) setPolishConfig(config)
+    return result
+  }, [])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!isRecordingShortcut) return
@@ -333,6 +344,7 @@ function App() {
                     {testRunning ? '测试中...' :
                      state.status === 'recording' ? '正在录音...' :
                      state.status === 'transcribing' ? '正在转写...' :
+                     state.status === 'polishing' ? '正在润色...' :
                      '按下快捷键开始录音'}
                   </p>
                 </div>
@@ -419,6 +431,19 @@ function App() {
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[hsl(var(--primary))]" />
               )}
             </button>
+            <button
+              onClick={() => setActiveTab('polish')}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors relative ${
+                activeTab === 'polish'
+                  ? 'text-[hsl(var(--primary))] bg-[hsl(var(--card))]'
+                  : 'text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] hover:bg-[hsl(var(--muted))]'
+              }`}
+            >
+              ✨ AI 润色
+              {activeTab === 'polish' && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[hsl(var(--primary))]" />
+              )}
+            </button>
           </div>
 
           {/* 标签页内容 */}
@@ -457,31 +482,21 @@ function App() {
                   </p>
                 </div>
 
-                {/* 触发模式 */}
-                <div>
+                {/* 快捷键行为说明 */}
+                <div className="p-4 bg-[hsl(var(--muted)/0.5)] rounded-lg">
                   <label className="text-sm font-medium text-[hsl(var(--text-primary))] block mb-2">
-                    触发模式
+                    录音模式
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {MODE_OPTIONS.map((option) => (
-                      <button
-                        key={option.value}
-                        onClick={() => handleModeChange(option.value)}
-                        className={`px-3 py-2.5 text-sm rounded-lg border transition-all ${
-                          shortcut?.mode === option.value
-                            ? 'bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))] border-[hsl(var(--primary))]'
-                            : 'bg-[hsl(var(--card))] text-[hsl(var(--text-secondary))] border-[hsl(var(--border))] hover:border-[hsl(var(--primary))]'
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
+                  <div className="space-y-2 text-sm text-[hsl(var(--text-secondary))]">
+                    <div className="flex items-start gap-2">
+                      <span className="inline-flex items-center justify-center w-12 h-5 rounded bg-[hsl(var(--muted))] text-[hsl(var(--text-primary))] text-xs flex-shrink-0">点按</span>
+                      <span>点击开始，再次点击停止录音</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="inline-flex items-center justify-center w-12 h-5 rounded bg-[hsl(var(--muted))] text-[hsl(var(--text-primary))] text-xs flex-shrink-0">长按</span>
+                      <span>按住说话，松开停止录音</span>
+                    </div>
                   </div>
-                  <p className="text-xs text-[hsl(var(--text-tertiary))] text-center mt-2">
-                    {shortcut?.mode === 'toggle' ? '按一次开始，再按一次停止' :
-                     shortcut?.mode === 'hold' ? '按住录音，松开停止' :
-                     '短按切换，长按持续'}
-                  </p>
                 </div>
               </div>
             )}
@@ -535,6 +550,13 @@ function App() {
                   </div>
                 )}
               </div>
+            )}
+
+            {activeTab === 'polish' && (
+              <PolishSettings
+                config={polishConfig}
+                onConfigChange={handlePolishConfigChange}
+              />
             )}
           </div>
         </div>

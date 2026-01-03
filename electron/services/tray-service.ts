@@ -19,6 +19,7 @@ const STATUS_TO_ICON: Record<SpeechFlowStatus, TrayIconState> = {
   idle: 'idle',
   recording: 'recording',
   transcribing: 'transcribing',
+  polishing: 'transcribing',  // 润色时复用转写图标
   ready: 'idle',
   error: 'idle',
 }
@@ -207,7 +208,7 @@ export class TrayService {
       },
       { type: 'separator' },
       {
-        label: `快捷键：${shortcut.accelerator} (${shortcut.mode === 'toggle' ? '点按' : '长按'})`,
+        label: `快捷键：${shortcut.accelerator}（点按润色/长按直出）`,
         enabled: false,
       },
       { type: 'separator' },
