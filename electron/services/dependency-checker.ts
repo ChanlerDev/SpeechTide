@@ -61,6 +61,7 @@ export async function checkSox(): Promise<{ installed: boolean; version?: string
  * @deprecated 项目已不再依赖 SoX
  */
 export async function installSoxWithHomebrew(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _onProgress?: (message: string) => void
 ): Promise<{ success: boolean; error?: string }> {
   // 项目已不再需要 SoX

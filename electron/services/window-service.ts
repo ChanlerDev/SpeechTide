@@ -237,7 +237,7 @@ export class WindowService {
   /**
    * 设置面板模式（预设高度）
    */
-  setPanelMode(mode: 'main' | 'withSettings' | 'withTest' | 'history'): void {
+  setPanelMode(mode: 'main' | 'withSettings' | 'withPolish' | 'withTest' | 'history'): void {
     const height = PANEL_HEIGHTS[mode] ?? PANEL_HEIGHTS.main
     this.setHeight(height)
   }

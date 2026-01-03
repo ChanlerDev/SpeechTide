@@ -12,8 +12,9 @@ import type { SpeechFlowStatus, ShortcutConfig } from '../../shared/app-state'
  */
 export const STATUS_HINT: Record<SpeechFlowStatus, string> = {
   idle: '待命，可通过快捷键开始录音',
-  recording: '录音中，松开快捷键或再按一次可停止',
+  recording: '录音中，松开快捷键停止',
   transcribing: '转写中，请稍候……',
+  polishing: 'AI 润色中……',
   ready: '转写完成，文本已准备就绪',
   error: '发生异常，请重试或查看日志',
 } as const
@@ -26,6 +27,7 @@ export const STATUS_LABEL: Record<SpeechFlowStatus, string> = {
   idle: '待命',
   recording: '录音中',
   transcribing: '转写中',
+  polishing: '润色中',
   ready: '完成',
   error: '异常',
 } as const
@@ -36,7 +38,7 @@ export const STATUS_LABEL: Record<SpeechFlowStatus, string> = {
 export const DEFAULT_SHORTCUT: ShortcutConfig = {
   accelerator: 'MetaRight',
   description: '切换录音流程',
-  mode: 'toggle',
+  holdThresholdMs: 300,
 } as const
 
 /**
@@ -83,6 +85,8 @@ export const PANEL_HEIGHTS = {
   main: 370,
   /** 设置面板展开时的高度（4个选项） */
   withSettings: 540,
+  /** AI 润色面板展开时的高度 */
+  withPolish: 580,
   /** 测试面板展开时的高度（按钮+结果） */
   withTest: 540,
   /** 历史面板高度 */

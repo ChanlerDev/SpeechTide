@@ -85,6 +85,13 @@ export class StateMachine {
   }
 
   /**
+   * 快捷设置：进入润色状态
+   */
+  setPolishing(message?: string, meta?: TranscriptionMeta): void {
+    this.setState('polishing', message ?? STATUS_HINT.polishing, { meta })
+  }
+
+  /**
    * 快捷设置：转写完成
    */
   setReady(transcript: string, meta: TranscriptionMeta): void {

@@ -4,9 +4,10 @@
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import type { SpeechTideState, ShortcutConfig, ShortcutMode } from '../shared/app-state'
+import type { SpeechTideState, ShortcutConfig } from '../shared/app-state'
 import { Onboarding } from './components/Onboarding'
 import { HistoryPanel } from './components/HistoryPanel'
+import { PolishSettings } from './components/PolishSettings'
 import { useNativeRecorder } from './hooks/useNativeRecorder'
 
 const INITIAL_STATE: SpeechTideState = {
@@ -23,11 +24,15 @@ interface TestResult {
   language?: string
 }
 
-const MODE_OPTIONS: { value: ShortcutMode; label: string }[] = [
-  { value: 'toggle', label: '点击' },
-  { value: 'hold', label: '长按' },
-  { value: 'hybrid', label: '混合' },
-]
+interface PolishConfig {
+  enabled: boolean
+  provider: 'openai' | 'deepseek'
+  apiKey: string
+  modelId: string
+  systemPrompt: string
+  timeoutMs: number
+  baseUrl?: string
+}
 
 /**
  * 状态配置
@@ -36,6 +41,7 @@ const STATUS_CONFIG = {
   idle: { label: '就绪', class: 'idle' },
   recording: { label: '录音中', class: 'recording' },
   transcribing: { label: '转写中', class: 'transcribing' },
+  polishing: { label: '润色中', class: 'transcribing' },
   ready: { label: '完成', class: 'idle' },
   error: { label: '错误', class: 'recording' },
 } as const
@@ -47,6 +53,7 @@ function App() {
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null)
   const [showHistory, setShowHistory] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showPolish, setShowPolish] = useState(false)
   const [showTest, setShowTest] = useState(false)
   const [state, setState] = useState<SpeechTideState>(INITIAL_STATE)
   const [shortcut, setShortcut] = useState<ShortcutConfig | null>(null)
@@ -59,6 +66,7 @@ function App() {
   const [autoShowOnStart, setAutoShowOnStart] = useState(false)
   const [cacheTTLMinutes, setCacheTTLMinutes] = useState(30)
   const [allowBetaUpdates, setAllowBetaUpdates] = useState(false)
+  const [polishConfig, setPolishConfig] = useState<PolishConfig | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const shortcutInputRef = useRef<HTMLInputElement>(null)
   const pressedKeysRef = useRef<Set<string>>(new Set())
@@ -87,6 +95,7 @@ function App() {
       setAutoShowOnStart(s.autoShowOnStart)
       setCacheTTLMinutes(Number.isFinite(s.cacheTTLMinutes) ? s.cacheTTLMinutes : 30)
       setAllowBetaUpdates(s.allowBetaUpdates ?? false)
+      if (s.polish) setPolishConfig(s.polish)
     })
 
     const disposeAudio = window.speech.onPlayAudio((audioPath) => {
@@ -132,10 +141,11 @@ function App() {
     return result
   }, [])
 
-  const handleModeChange = useCallback((mode: ShortcutMode) => {
-    if (!shortcut) return
-    handleShortcutChange({ ...shortcut, mode })
-  }, [shortcut, handleShortcutChange])
+  const handlePolishConfigChange = useCallback(async (config: PolishConfig) => {
+    const result = await window.speech.updateSettings({ polish: config })
+    if (result.success) setPolishConfig(config)
+    return result
+  }, [])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!isRecordingShortcut) return
@@ -305,6 +315,7 @@ function App() {
               <p className="text-sm text-[hsl(var(--text-tertiary))] text-center py-2">
                 {state.status === 'recording' ? '正在录音...' :
                  state.status === 'transcribing' ? '正在转写...' :
+                 state.status === 'polishing' ? '正在润色...' :
                  '按下快捷键开始录音'}
               </p>
             )}
@@ -337,17 +348,9 @@ function App() {
               }`}
               placeholder="点击设置"
             />
-            <div className="flex gap-1">
-              {MODE_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => handleModeChange(option.value)}
-                  className={`chip ${shortcut?.mode === option.value ? 'active' : ''}`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+            <span className="text-xs text-[hsl(var(--text-tertiary))] whitespace-nowrap">
+              短按润色 · 长按直出
+            </span>
           </div>
         </div>
 
@@ -369,6 +372,7 @@ function App() {
               onClick={() => {
                 const newShowSettings = !showSettings
                 setShowSettings(newShowSettings)
+                setShowPolish(false)
                 setShowTest(false)
                 window.speech.setPanelMode(newShowSettings ? 'withSettings' : 'main')
               }}
@@ -382,9 +386,26 @@ function App() {
             </button>
             <button
               onClick={() => {
+                const newShowPolish = !showPolish
+                setShowPolish(newShowPolish)
+                setShowSettings(false)
+                setShowTest(false)
+                window.speech.setPanelMode(newShowPolish ? 'withPolish' : 'main')
+              }}
+              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                showPolish
+                  ? 'bg-[hsl(var(--primary))] text-white'
+                  : 'text-[hsl(var(--text-secondary))] hover:bg-[hsl(var(--muted))]'
+              }`}
+            >
+              AI 润色
+            </button>
+            <button
+              onClick={() => {
                 const newShowTest = !showTest
                 setShowTest(newShowTest)
                 setShowSettings(false)
+                setShowPolish(false)
                 window.speech.setPanelMode(newShowTest ? 'withTest' : 'main')
               }}
               className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
@@ -432,6 +453,16 @@ function App() {
                 </select>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* AI Polish Panel (Below buttons) */}
+        {showPolish && (
+          <div className="px-4 py-3 bg-[hsl(var(--card))] border-t border-[hsl(var(--border))]">
+            <PolishSettings
+              config={polishConfig}
+              onConfigChange={handlePolishConfigChange}
+            />
           </div>
         )}
 

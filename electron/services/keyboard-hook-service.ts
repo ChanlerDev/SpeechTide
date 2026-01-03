@@ -2,17 +2,17 @@
  * SpeechTide 键盘钩子服务
  *
  * 使用 uiohook-napi 实现全局键盘监听
- * 支持 toggle/hold/hybrid 三种快捷键模式
+ * 统一 hybrid 模式：短按 = tap（AI 润色），长按 = hold（直接输出）
  */
 
 import { uIOhook, UiohookKey } from 'uiohook-napi'
-import type { ShortcutConfig } from '../../shared/app-state'
+import type { ShortcutConfig, TriggerType } from '../../shared/app-state'
 
-const DEFAULT_HOLD_THRESHOLD_MS = 250
+const DEFAULT_HOLD_THRESHOLD_MS = 300
 
 export interface KeyboardHookCallbacks {
-  onTrigger: () => void    // 触发录音（toggle 模式的开始/结束，hold/hybrid 的开始）
-  onRelease: () => void    // 释放停止（hold/hybrid 模式松开时）
+  onRecordingStart: () => void
+  onRecordingStop: (triggerType: TriggerType) => void
 }
 
 /**
@@ -240,6 +240,7 @@ function parseAccelerator(accelerator: string): ParsedShortcut {
 
 /**
  * 键盘钩子服务
+ * 统一 hybrid 行为：按下开始录音，松开停止并根据时长决定触发类型
  */
 export class KeyboardHookService {
   private config: ShortcutConfig
@@ -250,9 +251,8 @@ export class KeyboardHookService {
   // 状态追踪
   private isShortcutDown = false      // 快捷键是否按下
   private keyDownTime = 0             // 按下时间戳
-  private isRecording = false         // 是否正在录音（用于 toggle/hybrid）
+  private isRecording = false         // 是否正在录音
   private holdThresholdMs: number     // 长按判定阈值
-  private startedThisPress = false    // hybrid 模式：这次按键是否是开始录音的那次
 
   constructor(config: ShortcutConfig) {
     this.config = config
@@ -278,12 +278,10 @@ export class KeyboardHookService {
     try {
       uIOhook.start()
       this.isRunning = true
-      console.log(`[KeyboardHookService] 已启动，快捷键: ${this.config.accelerator}, 模式: ${this.config.mode}`)
+      console.log(`[KeyboardHookService] 已启动，快捷键: ${this.config.accelerator}, 阈值: ${this.holdThresholdMs}ms`)
       return true
     } catch (error) {
       console.error('[KeyboardHookService] 启动失败:', error)
-      // 权限不足时不阻止应用运行，但快捷键功能将不可用
-      // macOS 需要辅助功能权限：系统偏好设置 → 安全性与隐私 → 辅助功能
       console.warn('[KeyboardHookService] 快捷键功能不可用，请检查辅助功能权限')
       return false
     }
@@ -312,7 +310,7 @@ export class KeyboardHookService {
     this.parsedShortcut = parseAccelerator(config.accelerator)
     this.holdThresholdMs = config.holdThresholdMs ?? DEFAULT_HOLD_THRESHOLD_MS
     this.resetState()
-    console.log(`[KeyboardHookService] 配置已更新，快捷键: ${config.accelerator}, 模式: ${config.mode}`)
+    console.log(`[KeyboardHookService] 配置已更新，快捷键: ${config.accelerator}, 阈值: ${this.holdThresholdMs}ms`)
   }
 
   /**
@@ -336,7 +334,6 @@ export class KeyboardHookService {
   private resetState(): void {
     this.isShortcutDown = false
     this.keyDownTime = 0
-    // 注意：不重置 isRecording，由外部控制
   }
 
   /**
@@ -372,7 +369,7 @@ export class KeyboardHookService {
   }
 
   /**
-   * 处理按键按下
+   * 处理按键按下 - 统一 hybrid：按下即开始录音
    */
   private handleKeyDown = (e: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; keycode: number }): void => {
     if (!this.isShortcutMatch(e)) return
@@ -383,32 +380,15 @@ export class KeyboardHookService {
     this.isShortcutDown = true
     this.keyDownTime = Date.now()
 
-    const mode = this.config.mode
-
-    if (mode === 'toggle') {
-      // toggle 模式：按下即触发切换
-      this.callbacks?.onTrigger()
-      this.isRecording = !this.isRecording
-    } else if (mode === 'hold') {
-      // hold 模式：按下开始录音
-      this.callbacks?.onTrigger()
+    // 未录音时按下，开始录音
+    if (!this.isRecording) {
+      this.callbacks?.onRecordingStart()
       this.isRecording = true
-    } else if (mode === 'hybrid') {
-      // hybrid 模式：按下时开始录音（如果未录音）
-      if (!this.isRecording) {
-        // 未录音时按下，开始录音
-        this.callbacks?.onTrigger()
-        this.isRecording = true
-        this.startedThisPress = true  // 标记这次按键是开始录音的
-      } else {
-        // 正在录音时按下，等 keyup 时根据按住时长判断
-        this.startedThisPress = false
-      }
     }
   }
 
   /**
-   * 处理按键释放
+   * 处理按键释放 - 根据按住时长决定 triggerType
    */
   private handleKeyUp = (e: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; keycode: number }): void => {
     // 只检查主键释放
@@ -419,31 +399,11 @@ export class KeyboardHookService {
     const pressDuration = Date.now() - this.keyDownTime
     this.isShortcutDown = false
 
-    const mode = this.config.mode
-
-    if (mode === 'toggle') {
-      // toggle 模式：松开不做任何事
-    } else if (mode === 'hold') {
-      // hold 模式：松开停止录音
-      if (this.isRecording) {
-        this.callbacks?.onRelease()
-        this.isRecording = false
-      }
-    } else if (mode === 'hybrid') {
-      // hybrid 模式：根据按住时长和是否是开始按键判断
-      if (this.isRecording) {
-        if (pressDuration >= this.holdThresholdMs) {
-          // 长按：松开停止录音
-          this.callbacks?.onRelease()
-          this.isRecording = false
-        } else if (!this.startedThisPress) {
-          // 短按且不是开始录音的那次 → 停止录音
-          this.callbacks?.onRelease()
-          this.isRecording = false
-        }
-        // 短按且是开始录音的那次 → 不停止，继续录音
-      }
-      this.startedThisPress = false
+    // 正在录音时松开，停止录音并传递触发类型
+    if (this.isRecording) {
+      const triggerType: TriggerType = pressDuration >= this.holdThresholdMs ? 'hold' : 'tap'
+      this.callbacks?.onRecordingStop(triggerType)
+      this.isRecording = false
     }
   }
 }

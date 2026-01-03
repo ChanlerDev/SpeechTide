@@ -44,7 +44,7 @@ const speechAPI = {
     return ipcRenderer.invoke('speech:set-shortcut-recording', recording)
   },
   /** 设置面板模式（动态调整窗口高度） */
-  setPanelMode(mode: 'main' | 'withSettings' | 'withTest' | 'history') {
+  setPanelMode(mode: 'main' | 'withSettings' | 'withPolish' | 'withTest' | 'history') {
     return ipcRenderer.invoke('speech:set-panel-mode', mode)
   },
   /** 获取应用设置 */
