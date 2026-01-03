@@ -7,7 +7,7 @@
 import { BrowserWindow } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
-import { WINDOW_CONFIG, PANEL_HEIGHTS } from '../config/constants'
+import { WINDOW_CONFIG } from '../config/constants'
 
 const isMac = process.platform === 'darwin'
 
@@ -223,22 +223,4 @@ export class WindowService {
     }
   }
 
-  /**
-   * 设置窗口高度（动画过渡）
-   */
-  setHeight(height: number): void {
-    if (!this.window || this.window.isDestroyed()) return
-    const bounds = this.window.getBounds()
-    const targetHeight = Math.min(Math.max(height, WINDOW_CONFIG.minHeight), WINDOW_CONFIG.maxHeight)
-    if (bounds.height === targetHeight) return
-    this.window.setBounds({ ...bounds, height: targetHeight }, true)
-  }
-
-  /**
-   * 设置面板模式（预设高度）
-   */
-  setPanelMode(mode: 'main' | 'withSettings' | 'withTest' | 'history'): void {
-    const height = PANEL_HEIGHTS[mode] ?? PANEL_HEIGHTS.main
-    this.setHeight(height)
-  }
 }
