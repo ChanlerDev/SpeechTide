@@ -58,33 +58,19 @@ export const APP_CONSTANTS = {
 } as const
 
 /**
- * 窗口配置
+ * 窗口配置 - 双栏布局
  */
 export const WINDOW_CONFIG = {
-  /** 基础宽度 */
-  width: 360,
-  /** 基础高度（主面板折叠状态） */
-  height: 370,
+  /** 基础宽度（左栏300 + 右栏380） */
+  width: 680,
+  /** 基础高度 */
+  height: 540,
   /** 最小宽度 */
-  minWidth: 340,
+  minWidth: 600,
   /** 最小高度 */
-  minHeight: 320,
+  minHeight: 480,
   /** 最大宽度 */
-  maxWidth: 420,
-  /** 最大高度（历史面板或展开状态） */
-  maxHeight: 660,
-} as const
-
-/**
- * 面板高度预设
- */
-export const PANEL_HEIGHTS = {
-  /** 主面板基础高度 */
-  main: 370,
-  /** 设置面板展开时的高度（4个选项） */
-  withSettings: 540,
-  /** 测试面板展开时的高度（按钮+结果） */
-  withTest: 540,
-  /** 历史面板高度 */
-  history: 580,
+  maxWidth: 800,
+  /** 最大高度 */
+  maxHeight: 700,
 } as const
