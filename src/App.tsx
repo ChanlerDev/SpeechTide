@@ -80,7 +80,15 @@ function App() {
   }, [])
 
   useEffect(() => {
-    const dispose = window.speech.onStateChange((next) => setState(next))
+    const dispose = window.speech.onStateChange((next) => {
+      setState((prev) => {
+        // Clear test result when new real transcript arrives
+        if (next.transcript && next.transcript !== prev.transcript) {
+          setTestResult(null)
+        }
+        return next
+      })
+    })
     window.speech.getState().then((snapshot) => setState(snapshot))
     window.speech.getSettings().then((s) => {
       setShortcut(s.shortcut)
