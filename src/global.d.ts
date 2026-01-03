@@ -1,5 +1,6 @@
 import type { SpeechTideState, ShortcutConfig } from '../shared/app-state'
 import type { ConversationRecord } from '../shared/conversation'
+import type { AppSettings } from '../electron/config'
 
 interface TestTranscriptionResult {
   text: string
@@ -84,8 +85,8 @@ declare global {
       testTranscription: () => Promise<{ success: boolean; data?: TestTranscriptionResult; error?: string }>
       updateShortcut: (shortcut: ShortcutConfig) => Promise<{ success: boolean; error?: string }>
       setShortcutRecording: (recording: boolean) => Promise<void>
-      getSettings: () => Promise<{ shortcut: ShortcutConfig; autoInsertText: boolean; clipboardMode: boolean; notificationEnabled: boolean; autoShowOnStart: boolean; cacheTTLMinutes: number; allowBetaUpdates: boolean }>
-      updateSettings: (settings: Partial<{ autoInsertText: boolean; clipboardMode: boolean; notificationEnabled: boolean; autoShowOnStart: boolean; cacheTTLMinutes: number; allowBetaUpdates: boolean }>) => Promise<{ success: boolean; error?: string }>
+      getSettings: () => Promise<AppSettings>
+      updateSettings: (settings: Partial<Omit<AppSettings, 'shortcut'>>) => Promise<{ success: boolean; error?: string }>
       checkAppleScriptPermission: () => Promise<{ available: boolean; hasPermission: boolean; message: string; guide?: string }>
       playTestAudio: () => Promise<{ success: boolean; error?: string }>
       getHistoryStats: (options?: { maxAgeDays?: number }) => Promise<{ count: number; sizeBytes: number; error?: string }>

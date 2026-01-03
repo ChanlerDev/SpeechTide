@@ -8,6 +8,7 @@ import { ipcMain } from 'electron'
 import type { ShortcutConfig, SpeechTideState } from '../../shared/app-state'
 import type { ConversationRecord } from '../../shared/conversation'
 import { loadAppSettings } from '../config'
+import type { AppSettings } from '../config'
 
 export interface IPCHandlers {
   getState: () => SpeechTideState
@@ -17,14 +18,7 @@ export interface IPCHandlers {
   updateShortcut: (shortcut: ShortcutConfig) => Promise<{ success: boolean; error?: string }>
   setShortcutRecording: (recording: boolean) => void
   getSettings: () => ReturnType<typeof loadAppSettings>
-  updateSettings: (settings: Partial<{
-    autoInsertText: boolean
-    clipboardMode: boolean
-    notificationEnabled: boolean
-    autoShowOnStart: boolean
-    cacheTTLMinutes: number
-    allowBetaUpdates: boolean
-  }>) => Promise<{ success: boolean; error?: string }>
+  updateSettings: (settings: Partial<Omit<AppSettings, 'shortcut'>>) => Promise<{ success: boolean; error?: string }>
   checkAppleScriptPermission: () => Promise<{
     available: boolean
     hasPermission: boolean
