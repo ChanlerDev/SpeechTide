@@ -364,7 +364,7 @@ function App() {
               <button
                 onClick={runTest}
                 disabled={testRunning || state.status === 'recording' || state.status === 'transcribing'}
-                className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg bg-[hsl(var(--primary))] text-white hover:opacity-90 disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg text-[hsl(var(--text-secondary))] hover:bg-[hsl(var(--muted))] disabled:opacity-50 transition-colors"
               >
                 🎤 {testRunning ? '测试中' : '测试'}
               </button>
@@ -439,8 +439,8 @@ function App() {
                     }}
                     className={`w-full px-4 py-3 text-center text-base font-mono rounded-lg cursor-pointer transition-all ${
                       isRecordingShortcut
-                        ? 'bg-[hsl(var(--primary))] text-white'
-                        : 'bg-[hsl(var(--muted))] text-[hsl(var(--text-primary))] hover:bg-[hsl(var(--secondary))]'
+                        ? 'bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))] border-2 border-[hsl(var(--primary))]'
+                        : 'bg-[hsl(var(--muted))] text-[hsl(var(--text-primary))] hover:bg-[hsl(var(--secondary))] border-2 border-transparent'
                     }`}
                     placeholder="点击设置"
                   />
@@ -461,7 +461,7 @@ function App() {
                         onClick={() => handleModeChange(option.value)}
                         className={`px-3 py-2.5 text-sm rounded-lg border transition-all ${
                           shortcut?.mode === option.value
-                            ? 'bg-[hsl(var(--primary))] text-white border-[hsl(var(--primary))]'
+                            ? 'bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))] border-[hsl(var(--primary))]'
                             : 'bg-[hsl(var(--card))] text-[hsl(var(--text-secondary))] border-[hsl(var(--border))] hover:border-[hsl(var(--primary))]'
                         }`}
                       >
