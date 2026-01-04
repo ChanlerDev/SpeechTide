@@ -481,8 +481,12 @@ export class AppController {
       let finalText = transcription.text
       let polished = false
 
-      // 短按 + 润色已启用 + 配置有效 → 触发润色
-      const shouldPolish = triggerType === 'tap' && this.polishEngine?.isConfigValid()
+      // 根据触发类型和配置决定是否润色
+      const shortcutConfig = this.settings.shortcut
+      const polishEnabled = triggerType === 'tap'
+        ? (shortcutConfig.tapPolishEnabled ?? true)
+        : (shortcutConfig.holdPolishEnabled ?? false)
+      const shouldPolish = polishEnabled && this.polishEngine?.isConfigValid()
       if (shouldPolish) {
         const nextMeta: TranscriptionMeta = {
           sessionId,

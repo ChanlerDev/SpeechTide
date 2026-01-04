@@ -47,18 +47,6 @@ export const PolishSettings = ({ config, onConfigChange }: PolishSettingsProps) 
     }
   }, [config])
 
-  const handleToggleEnabled = useCallback(async () => {
-    const newConfig = { ...localConfig, enabled: !localConfig.enabled }
-    setLocalConfig(newConfig)
-    setSaving(true)
-    const result = await onConfigChange(newConfig)
-    setSaving(false)
-    if (!result.success) {
-      setLocalConfig(localConfig) // 回滚
-      alert('保存失败: ' + result.error)
-    }
-  }, [localConfig, onConfigChange])
-
   const handleProviderChange = useCallback(async (provider: 'openai' | 'deepseek') => {
     const defaultModel = PROVIDER_OPTIONS.find(p => p.value === provider)?.defaultModel || 'gpt-4o-mini'
     const newConfig = { ...localConfig, provider, modelId: defaultModel, baseUrl: undefined }
@@ -143,41 +131,19 @@ export const PolishSettings = ({ config, onConfigChange }: PolishSettingsProps) 
     return PROVIDER_OPTIONS.find(p => p.value === localConfig.provider)?.defaultBaseUrl || ''
   }
 
-  const isConfigValid = localConfig.enabled && localConfig.apiKey && localConfig.modelId
+  const isConfigValid = localConfig.apiKey && localConfig.modelId
 
   return (
     <div className="space-y-4">
-      {/* 点按模式提示 */}
+      {/* 提示信息 */}
       <div className="flex items-center gap-2 px-3 py-2 bg-orange-50 border border-orange-100 rounded-lg">
         <span className="text-orange-500">💡</span>
-        <span className="text-xs text-orange-700">AI 润色仅在<strong>点按</strong>录音模式下触发，长按录音将直接输出原文</span>
+        <span className="text-xs text-orange-700">在「快捷键」标签页的录音模式中可单独控制各模式是否启用 AI 润色</span>
       </div>
 
       {/* 设置卡片 */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 space-y-3">
-        {/* 标题和开关 */}
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-sm font-medium text-gray-700">启用 AI 润色</span>
-          </div>
-          <button
-            onClick={handleToggleEnabled}
-            disabled={saving}
-            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-              localConfig.enabled ? 'bg-orange-500' : 'bg-gray-200'
-            } ${saving ? 'opacity-50' : ''}`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                localConfig.enabled ? 'translate-x-4' : 'translate-x-0.5'
-              }`}
-            />
-          </button>
-        </div>
-
-      {/* 配置区域（仅启用时显示） */}
-      {localConfig.enabled && (
-        <div className="space-y-3 pt-2 border-t border-gray-100">
+        <div className="space-y-3">
           {/* 提供商选择 */}
           <div>
             <span className="text-xs font-medium text-gray-600">API 提供商</span>
@@ -297,7 +263,6 @@ export const PolishSettings = ({ config, onConfigChange }: PolishSettingsProps) 
             </p>
           )}
         </div>
-      )}
       </div>
     </div>
   )
