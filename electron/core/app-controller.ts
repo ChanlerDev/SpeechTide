@@ -9,6 +9,7 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import type { SpeechTideState, TranscriptionMeta, TriggerType } from '../../shared/app-state'
+import { DEFAULT_TAP_POLISH_ENABLED, DEFAULT_HOLD_POLISH_ENABLED } from '../../shared/app-state'
 import type { ConversationRecord } from '../../shared/conversation'
 import { StateMachine } from './state-machine'
 import { WindowService } from '../services/window-service'
@@ -245,7 +246,7 @@ export class AppController {
             } else {
               this.polishEngine.updateConfig(settings.polish)
             }
-            logger.info('润色配置已更新', { enabled: settings.polish.enabled, provider: settings.polish.provider })
+            logger.info('润色配置已更新', { provider: settings.polish.provider, modelId: settings.polish.modelId })
           }
 
           return { success: true }
@@ -481,8 +482,12 @@ export class AppController {
       let finalText = transcription.text
       let polished = false
 
-      // 短按 + 润色已启用 + 配置有效 → 触发润色
-      const shouldPolish = triggerType === 'tap' && this.polishEngine?.isConfigValid()
+      // 根据触发类型和配置决定是否润色
+      const shortcutConfig = this.settings.shortcut
+      const polishEnabled = triggerType === 'tap'
+        ? (shortcutConfig.tapPolishEnabled ?? DEFAULT_TAP_POLISH_ENABLED)
+        : (shortcutConfig.holdPolishEnabled ?? DEFAULT_HOLD_POLISH_ENABLED)
+      const shouldPolish = polishEnabled && this.polishEngine?.isConfigValid()
       if (shouldPolish) {
         const nextMeta: TranscriptionMeta = {
           sessionId,
