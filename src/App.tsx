@@ -484,17 +484,47 @@ function App() {
 
                 {/* 快捷键行为说明 */}
                 <div className="p-4 bg-[hsl(var(--muted)/0.5)] rounded-lg">
-                  <label className="text-sm font-medium text-[hsl(var(--text-primary))] block mb-2">
+                  <label className="text-sm font-medium text-[hsl(var(--text-primary))] block mb-3">
                     录音模式
                   </label>
-                  <div className="space-y-2 text-sm text-[hsl(var(--text-secondary))]">
-                    <div className="flex items-start gap-2">
-                      <span className="inline-flex items-center justify-center w-12 h-5 rounded bg-[hsl(var(--muted))] text-[hsl(var(--text-primary))] text-xs flex-shrink-0">点按</span>
-                      <span>点击开始，再次点击停止录音</span>
+                  <div className="space-y-3 text-sm text-[hsl(var(--text-secondary))]">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center justify-center w-12 h-5 rounded bg-[hsl(var(--muted))] text-[hsl(var(--text-primary))] text-xs flex-shrink-0">点按</span>
+                        <span>点击开始，再次点击停止</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-[hsl(var(--text-tertiary))]">AI 润色</span>
+                        <button
+                          onClick={() => {
+                            if (!shortcut) return
+                            const newShortcut = { ...shortcut, tapPolishEnabled: !(shortcut.tapPolishEnabled ?? true) }
+                            handleShortcutChange(newShortcut)
+                          }}
+                          className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${(shortcut?.tapPolishEnabled ?? true) ? 'bg-[hsl(var(--primary))]' : 'bg-[hsl(var(--muted))]'}`}
+                        >
+                          <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${(shortcut?.tapPolishEnabled ?? true) ? 'left-4' : 'left-0.5'}`} />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-start gap-2">
-                      <span className="inline-flex items-center justify-center w-12 h-5 rounded bg-[hsl(var(--muted))] text-[hsl(var(--text-primary))] text-xs flex-shrink-0">长按</span>
-                      <span>按住说话，松开停止录音</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center justify-center w-12 h-5 rounded bg-[hsl(var(--muted))] text-[hsl(var(--text-primary))] text-xs flex-shrink-0">长按</span>
+                        <span>按住说话，松开停止</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-[hsl(var(--text-tertiary))]">AI 润色</span>
+                        <button
+                          onClick={() => {
+                            if (!shortcut) return
+                            const newShortcut = { ...shortcut, holdPolishEnabled: !(shortcut.holdPolishEnabled ?? false) }
+                            handleShortcutChange(newShortcut)
+                          }}
+                          className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${(shortcut?.holdPolishEnabled ?? false) ? 'bg-[hsl(var(--primary))]' : 'bg-[hsl(var(--muted))]'}`}
+                        >
+                          <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${(shortcut?.holdPolishEnabled ?? false) ? 'left-4' : 'left-0.5'}`} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
