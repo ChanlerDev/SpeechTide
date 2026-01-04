@@ -25,7 +25,6 @@ interface TestResult {
 }
 
 interface PolishConfig {
-  enabled: boolean
   provider: 'openai' | 'deepseek'
   apiKey: string
   modelId: string

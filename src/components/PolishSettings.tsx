@@ -6,7 +6,6 @@
 import { useState, useCallback, useEffect } from 'react'
 
 interface PolishConfig {
-  enabled: boolean
   provider: 'openai' | 'deepseek'
   apiKey: string
   modelId: string
@@ -29,7 +28,6 @@ const DEFAULT_PROMPT = '你是一个语音转文字的润色助手。用户输�
 
 export const PolishSettings = ({ config, onConfigChange }: PolishSettingsProps) => {
   const [localConfig, setLocalConfig] = useState<PolishConfig>(() => config || {
-    enabled: false,
     provider: 'openai',
     apiKey: '',
     modelId: 'gpt-4o-mini',

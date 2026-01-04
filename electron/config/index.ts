@@ -184,8 +184,6 @@ export interface AppSettings {
  * AI 润色配置
  */
 export interface PolishConfig {
-  /** 是否启用润色 */
-  enabled: boolean
   /** API 提供商 */
   provider: 'openai' | 'deepseek'
   /** API 密钥 */
@@ -201,7 +199,6 @@ export interface PolishConfig {
 }
 
 const DEFAULT_POLISH_CONFIG: PolishConfig = {
-  enabled: false,
   provider: 'openai',
   apiKey: '',
   modelId: 'gpt-4o-mini',
