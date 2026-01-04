@@ -4,7 +4,8 @@
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import type { SpeechTideState, ShortcutConfig } from '../shared/app-state'
+import type { SpeechTideState, ShortcutConfig, PolishConfig } from '../shared/app-state'
+import { DEFAULT_TAP_POLISH_ENABLED, DEFAULT_HOLD_POLISH_ENABLED } from '../shared/app-state'
 import { Onboarding } from './components/Onboarding'
 import { HistoryPanel } from './components/HistoryPanel'
 import { PolishSettings } from './components/PolishSettings'
@@ -22,15 +23,6 @@ interface TestResult {
   processingTime: number
   modelId: string
   language?: string
-}
-
-interface PolishConfig {
-  provider: 'openai' | 'deepseek'
-  apiKey: string
-  modelId: string
-  systemPrompt: string
-  timeoutMs: number
-  baseUrl?: string
 }
 
 
@@ -497,12 +489,12 @@ function App() {
                         <button
                           onClick={() => {
                             if (!shortcut) return
-                            const newShortcut = { ...shortcut, tapPolishEnabled: !(shortcut.tapPolishEnabled ?? true) }
+                            const newShortcut = { ...shortcut, tapPolishEnabled: !(shortcut.tapPolishEnabled ?? DEFAULT_TAP_POLISH_ENABLED) }
                             handleShortcutChange(newShortcut)
                           }}
-                          className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${(shortcut?.tapPolishEnabled ?? true) ? 'bg-[hsl(var(--primary))]' : 'bg-[hsl(var(--muted))]'}`}
+                          className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${(shortcut?.tapPolishEnabled ?? DEFAULT_TAP_POLISH_ENABLED) ? 'bg-[hsl(var(--primary))]' : 'bg-[hsl(var(--muted))]'}`}
                         >
-                          <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${(shortcut?.tapPolishEnabled ?? true) ? 'left-4' : 'left-0.5'}`} />
+                          <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${(shortcut?.tapPolishEnabled ?? DEFAULT_TAP_POLISH_ENABLED) ? 'left-4' : 'left-0.5'}`} />
                         </button>
                       </div>
                     </div>
@@ -516,12 +508,12 @@ function App() {
                         <button
                           onClick={() => {
                             if (!shortcut) return
-                            const newShortcut = { ...shortcut, holdPolishEnabled: !(shortcut.holdPolishEnabled ?? false) }
+                            const newShortcut = { ...shortcut, holdPolishEnabled: !(shortcut.holdPolishEnabled ?? DEFAULT_HOLD_POLISH_ENABLED) }
                             handleShortcutChange(newShortcut)
                           }}
-                          className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${(shortcut?.holdPolishEnabled ?? false) ? 'bg-[hsl(var(--primary))]' : 'bg-[hsl(var(--muted))]'}`}
+                          className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${(shortcut?.holdPolishEnabled ?? DEFAULT_HOLD_POLISH_ENABLED) ? 'bg-[hsl(var(--primary))]' : 'bg-[hsl(var(--muted))]'}`}
                         >
-                          <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${(shortcut?.holdPolishEnabled ?? false) ? 'left-4' : 'left-0.5'}`} />
+                          <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${(shortcut?.holdPolishEnabled ?? DEFAULT_HOLD_POLISH_ENABLED) ? 'left-4' : 'left-0.5'}`} />
                         </button>
                       </div>
                     </div>

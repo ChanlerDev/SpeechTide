@@ -40,3 +40,20 @@ export interface ShortcutConfig {
   tapPolishEnabled?: boolean  // 点按模式是否启用 AI 润色，默认 true
   holdPolishEnabled?: boolean // 长按模式是否启用 AI 润色，默认 false
 }
+
+/** 点按模式 AI 润色默认值 */
+export const DEFAULT_TAP_POLISH_ENABLED = true
+/** 长按模式 AI 润色默认值 */
+export const DEFAULT_HOLD_POLISH_ENABLED = false
+
+/**
+ * AI 润色配置（共享定义）
+ */
+export interface PolishConfig {
+  provider: 'openai' | 'deepseek'
+  apiKey: string
+  modelId: string
+  systemPrompt: string
+  timeoutMs: number
+  baseUrl?: string
+}

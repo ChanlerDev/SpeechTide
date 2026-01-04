@@ -4,15 +4,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react'
-
-interface PolishConfig {
-  provider: 'openai' | 'deepseek'
-  apiKey: string
-  modelId: string
-  systemPrompt: string
-  timeoutMs: number
-  baseUrl?: string
-}
+import type { PolishConfig } from '../../shared/app-state'
 
 interface PolishSettingsProps {
   config: PolishConfig | null

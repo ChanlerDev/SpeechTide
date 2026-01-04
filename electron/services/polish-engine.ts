@@ -5,7 +5,7 @@
  * 支持 OpenAI、DeepSeek 等兼容 API
  */
 
-import type { PolishConfig } from '../config'
+import type { PolishConfig } from '../../shared/app-state'
 import { createModuleLogger } from '../utils/logger'
 
 const logger = createModuleLogger('polish-engine')

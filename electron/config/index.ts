@@ -1,7 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
-import type { ShortcutConfig } from '../../shared/app-state'
+import type { ShortcutConfig, PolishConfig } from '../../shared/app-state'
+import { DEFAULT_TAP_POLISH_ENABLED, DEFAULT_HOLD_POLISH_ENABLED } from '../../shared/app-state'
 import {
   getAppRoot,
   getUserDataPath,
@@ -14,6 +15,8 @@ const DEFAULT_SHORTCUT: ShortcutConfig = {
   accelerator: 'MetaRight',
   description: '切换录音流程',
   holdThresholdMs: 300,
+  tapPolishEnabled: DEFAULT_TAP_POLISH_ENABLED,
+  holdPolishEnabled: DEFAULT_HOLD_POLISH_ENABLED,
 }
 
 export interface RecorderConfig {
@@ -178,24 +181,6 @@ export interface AppSettings {
   allowBetaUpdates: boolean
   /** AI 润色配置 */
   polish: PolishConfig
-}
-
-/**
- * AI 润色配置
- */
-export interface PolishConfig {
-  /** API 提供商 */
-  provider: 'openai' | 'deepseek'
-  /** API 密钥 */
-  apiKey: string
-  /** 模型 ID */
-  modelId: string
-  /** 系统提示词 */
-  systemPrompt: string
-  /** 超时时间（毫秒） */
-  timeoutMs: number
-  /** 自定义 base URL（可选，用于自部署或代理） */
-  baseUrl?: string
 }
 
 const DEFAULT_POLISH_CONFIG: PolishConfig = {
