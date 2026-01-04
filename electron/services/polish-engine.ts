@@ -52,10 +52,11 @@ export class PolishEngine {
   }
 
   /**
-   * 检查配置是否有效
+   * 检查配置是否有效（仅检查 API 密钥和模型，不检查 enabled 字段）
+   * enabled 字段已由 shortcut 的 tapPolishEnabled/holdPolishEnabled 替代
    */
   isConfigValid(): boolean {
-    return !!(this.config.enabled && this.config.apiKey && this.config.modelId)
+    return !!(this.config.apiKey && this.config.modelId)
   }
 
   /**
