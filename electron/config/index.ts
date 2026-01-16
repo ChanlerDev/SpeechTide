@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
-import type { ShortcutConfig, PolishConfig } from '../../shared/app-state'
+import type { ShortcutConfig, PolishConfig, TranscriptionSettings, OnlineTranscriptionConfig } from '../../shared/app-state'
 import { DEFAULT_TAP_POLISH_ENABLED, DEFAULT_HOLD_POLISH_ENABLED } from '../../shared/app-state'
 import {
   getAppRoot,
@@ -80,7 +80,7 @@ export function loadRecorderConfig(): RecorderConfig {
     threshold: 0,
     silence: '10.0',
     recorder: 'sox',
-    maxDurationMs: 60000,
+    maxDurationMs: 0,
   }
   return loadJsonFile<RecorderConfig>('audio.json', defaults)
 }
@@ -181,6 +181,8 @@ export interface AppSettings {
   allowBetaUpdates: boolean
   /** AI 润色配置 */
   polish: PolishConfig
+  /** 转录配置 */
+  transcription: TranscriptionSettings
 }
 
 const DEFAULT_POLISH_CONFIG: PolishConfig = {
@@ -189,6 +191,20 @@ const DEFAULT_POLISH_CONFIG: PolishConfig = {
   modelId: 'gpt-4o-mini',
   systemPrompt: '你是一个语音转文字的润色助手。用户输入的是语音识别后的原始文本，可能包含口语化表达、重复、填充词等。请将其润色为流畅、简洁的书面文本，保持原意不变。只输出润色后的文本，不要添加任何解释或额外内容。',
   timeoutMs: 30000,
+}
+
+const DEFAULT_ONLINE_TRANSCRIPTION_CONFIG: OnlineTranscriptionConfig = {
+  provider: 'openai',
+  apiKey: '',
+  modelId: 'whisper-1',
+  responseFormat: 'json',
+  temperature: 0,
+  timeoutMs: 120000,
+}
+
+const DEFAULT_TRANSCRIPTION_SETTINGS: TranscriptionSettings = {
+  mode: 'offline',
+  online: DEFAULT_ONLINE_TRANSCRIPTION_CONFIG,
 }
 
 export function loadAppSettings(): AppSettings {
@@ -201,8 +217,25 @@ export function loadAppSettings(): AppSettings {
     cacheTTLMinutes: 30, // 默认 30 分钟
     allowBetaUpdates: false, // 默认不接收测试版
     polish: DEFAULT_POLISH_CONFIG,
+    transcription: DEFAULT_TRANSCRIPTION_SETTINGS,
   }
-  return loadJsonFile<AppSettings>('settings.json', defaults)
+  const raw = loadJsonFile<AppSettings>('settings.json', defaults)
+  return {
+    ...defaults,
+    ...raw,
+    polish: {
+      ...DEFAULT_POLISH_CONFIG,
+      ...raw.polish,
+    },
+    transcription: {
+      ...DEFAULT_TRANSCRIPTION_SETTINGS,
+      ...raw.transcription,
+      online: {
+        ...DEFAULT_ONLINE_TRANSCRIPTION_CONFIG,
+        ...raw.transcription?.online,
+      },
+    },
+  }
 }
 
 export function saveAppSettings(settings: Partial<AppSettings>): void {

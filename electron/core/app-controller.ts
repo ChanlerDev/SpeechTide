@@ -18,7 +18,7 @@ import { KeyboardHookService } from '../services/keyboard-hook-service'
 import { IPCListeners } from '../listeners/ipc-listeners'
 import { ipcMain } from 'electron'
 import { AudioRecorder, RecordingHandle, RecordingResult, NativeRecordingHandle } from '../audio/audio-recorder'
-import { createTranscriber, Transcriber } from '../transcriber'
+import { createTranscriber, Transcriber, type OpenAITranscriberConfig } from '../transcriber'
 import { getDefaultSupportDirectory, loadRecorderConfig, loadTranscriberConfig, loadAppSettings, saveAppSettings } from '../config'
 import { ConversationStore } from '../storage/conversation-store'
 import { AppleScriptTextInserter } from '../utils/apple-script'
@@ -43,7 +43,7 @@ export class AppController {
 
   // 业务组件
   private readonly recorderConfig = loadRecorderConfig()
-  private readonly transcriberConfig = loadTranscriberConfig()
+  private readonly senseVoiceConfig = loadTranscriberConfig()
   private readonly supportDir = getDefaultSupportDirectory()
   private readonly conversationsDir = path.join(this.supportDir, 'conversations')
   // 测试音频存储在 assets 目录（持久化，不会被系统清空）
@@ -221,6 +221,26 @@ export class AppController {
             }
           }
 
+          if (settings.transcription) {
+            settings.transcription = {
+              ...this.settings.transcription,
+              ...settings.transcription,
+              online: {
+                ...this.settings.transcription?.online,
+                ...settings.transcription.online,
+              },
+            }
+          }
+
+          if (settings.polish) {
+            settings.polish = {
+              ...this.settings.polish,
+              ...settings.polish,
+            }
+          }
+
+          const transcriptionChanged = settings.transcription !== undefined
+
           saveAppSettings(settings)
           const oldTTL = this.settings.cacheTTLMinutes
           Object.assign(this.settings, settings)
@@ -237,6 +257,12 @@ export class AppController {
           // 如果 beta 更新设置变更，更新 UpdateService
           if (settings.allowBetaUpdates !== undefined) {
             updateService.setAllowBetaUpdates(settings.allowBetaUpdates)
+          }
+
+          if (transcriptionChanged) {
+            this.unloadTranscriber()
+            this.cancelTranscriberUnload()
+            logger.info('转写配置已更新', { mode: this.settings.transcription?.mode })
           }
 
           // 如果润色配置变更，更新 PolishEngine
@@ -432,9 +458,7 @@ export class AppController {
         throw new Error('窗口未初始化或已销毁，无法录音')
       }
       const handle = await this.audioRecorder.start(sessionId, mainWindow)
-      const timeout = setTimeout(() => {
-        this.stopRecording('录音达到设定上限，开始转写…')
-      }, this.recorderConfig.maxDurationMs)
+      const timeout = undefined
 
       this.cancelIdleTimer()
       this.activeRecording = { sessionId, handle, timeout, recordingTimer }
@@ -814,6 +838,26 @@ export class AppController {
     }
   }
 
+  private resolveTranscriberConfig() {
+    const mode = this.settings.transcription?.mode ?? 'offline'
+    if (mode === 'online') {
+      const online = this.settings.transcription?.online
+      const config: OpenAITranscriberConfig = {
+        engine: 'openai',
+        provider: 'openai',
+        apiKey: online?.apiKey ?? '',
+        modelId: online?.modelId ?? 'whisper-1',
+        baseUrl: online?.baseUrl,
+        language: online?.language,
+        responseFormat: online?.responseFormat,
+        temperature: online?.temperature,
+        timeoutMs: online?.timeoutMs,
+      }
+      return config
+    }
+    return this.senseVoiceConfig
+  }
+
   /**
    * 确保转写器可用（懒加载）
    * 如果已销毁或未初始化，则重新创建
@@ -825,7 +869,7 @@ export class AppController {
 
     if (!this.transcriber) {
       logger.info('创建转写器实例...')
-      this.transcriber = createTranscriber(this.transcriberConfig, { supportDir: this.supportDir })
+      this.transcriber = createTranscriber(this.resolveTranscriberConfig(), { supportDir: this.supportDir })
     }
     return this.transcriber
   }
@@ -836,6 +880,10 @@ export class AppController {
    */
   private scheduleTranscriberUnload(): void {
     this.cancelTranscriberUnload()
+
+    if (this.settings.transcription?.mode === 'online') {
+      return
+    }
 
     // 验证从配置加载的 TTL 值，防止损坏的 settings.json 导致 NaN
     const validValues = [0, 5, 15, 30, 60]

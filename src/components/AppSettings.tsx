@@ -77,10 +77,6 @@ export const AppSettings = memo<AppSettingsProps>(({
     await onUpdateAllowBetaUpdates(true)
   }, [onUpdateAllowBetaUpdates])
 
-  const handleCacheTTLChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    onUpdateCacheTTL(Number(e.target.value))
-  }, [onUpdateCacheTTL])
-
   const Toggle = ({ enabled, onToggle, label }: { enabled: boolean; onToggle: () => void; label: string }) => (
     <div className="flex items-center justify-between py-1.5">
       <span className="text-xs text-gray-600">{label}</span>
@@ -145,19 +141,23 @@ export const AppSettings = memo<AppSettingsProps>(({
         )}
 
         <div className="divide-y divide-gray-50">
-          <div className="flex items-center justify-between py-1.5">
+          <div className="py-1.5">
             <span className="text-xs text-gray-600">模型缓存时间</span>
-            <select
-              value={cacheTTLMinutes}
-              onChange={handleCacheTTLChange}
-              className="text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[hsl(var(--primary))]"
-            >
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
               {CACHE_TTL_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
+                <button
+                  key={opt.value}
+                  onClick={() => onUpdateCacheTTL(opt.value)}
+                  className={`px-2.5 py-1 text-xs rounded-full border transition-all ${
+                    cacheTTLMinutes === opt.value
+                      ? 'bg-orange-50 border-orange-300 text-orange-700 font-medium'
+                      : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300'
+                  }`}
+                >
                   {opt.label}
-                </option>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
         </div>
       </div>

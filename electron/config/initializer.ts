@@ -28,6 +28,17 @@ const DEFAULT_SETTINGS = {
   notificationEnabled: true,
   autoShowOnStart: true,
   cacheTTLMinutes: 30,
+  transcription: {
+    mode: 'offline',
+    online: {
+      provider: 'openai',
+      apiKey: '',
+      modelId: 'whisper-1',
+      responseFormat: 'json',
+      temperature: 0,
+      timeoutMs: 120000,
+    },
+  },
 }
 
 /** 默认音频配置 */
@@ -37,7 +48,7 @@ const DEFAULT_AUDIO_CONFIG = {
   threshold: 0,
   silence: '10.0',
   recorder: 'sox',
-  maxDurationMs: 60000,
+  maxDurationMs: 0,
 }
 
 /** 默认转写配置 */

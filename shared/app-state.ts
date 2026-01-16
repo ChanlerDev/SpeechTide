@@ -57,3 +57,90 @@ export interface PolishConfig {
   timeoutMs: number
   baseUrl?: string
 }
+
+/**
+ * 转录模式
+ */
+export type TranscriptionMode = 'offline' | 'online'
+
+/**
+ * 在线转录 Provider 类型
+ * - openai: OpenAI 官方
+ * - groq: Groq（免费高速）
+ * - custom: 自定义 OpenAI 兼容服务
+ */
+export type TranscriptionProvider = 'openai' | 'groq' | 'custom'
+
+/**
+ * Provider 预设模型
+ */
+export interface ProviderModelPreset {
+  value: string
+  label: string
+  description?: string
+}
+
+/**
+ * Provider 配置元数据
+ */
+export interface ProviderMeta {
+  id: TranscriptionProvider
+  name: string
+  defaultBaseUrl: string
+  models: ProviderModelPreset[]
+  requiresBaseUrl: boolean
+}
+
+/**
+ * Provider 配置预设
+ */
+export const TRANSCRIPTION_PROVIDERS: ProviderMeta[] = [
+  {
+    id: 'openai',
+    name: 'OpenAI',
+    defaultBaseUrl: 'https://api.openai.com/v1',
+    requiresBaseUrl: false,
+    models: [
+      { value: 'whisper-1', label: 'whisper-1', description: '经典 Whisper，稳定可靠' },
+      { value: 'gpt-4o-transcribe', label: 'gpt-4o-transcribe', description: '更高准确率' },
+      { value: 'gpt-4o-mini-transcribe', label: 'gpt-4o-mini-transcribe', description: '更快更便宜' },
+    ],
+  },
+  {
+    id: 'groq',
+    name: 'Groq',
+    defaultBaseUrl: 'https://api.groq.com/openai/v1',
+    requiresBaseUrl: false,
+    models: [
+      { value: 'whisper-large-v3-turbo', label: 'whisper-large-v3-turbo', description: '高速，推荐' },
+      { value: 'whisper-large-v3', label: 'whisper-large-v3', description: '更高准确率' },
+      { value: 'distil-whisper-large-v3-en', label: 'distil-whisper-large-v3-en', description: '英文专用' },
+    ],
+  },
+  {
+    id: 'custom',
+    name: '自定义',
+    defaultBaseUrl: '',
+    requiresBaseUrl: true,
+    models: [],
+  },
+]
+
+/**
+ * 在线转录配置
+ */
+export interface OnlineTranscriptionConfig {
+  provider: TranscriptionProvider
+  apiKey: string
+  modelId: string
+  baseUrl?: string
+  language?: string
+  responseFormat?: 'text' | 'json'
+  temperature?: number
+  timeoutMs?: number
+}
+
+export interface TranscriptionSettings {
+  mode: TranscriptionMode
+  online: OnlineTranscriptionConfig
+}
