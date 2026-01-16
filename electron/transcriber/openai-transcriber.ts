@@ -132,4 +132,8 @@ export class OpenAITranscriber implements Transcriber {
       clearTimeout(timeoutId)
     }
   }
+
+  destroy(): void {
+    // No resources to release for HTTP-based transcriber
+  }
 }

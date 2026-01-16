@@ -3,7 +3,7 @@
  * Provider 卡片列表 → 选中后展开配置
  */
 
-import { useCallback, useEffect, useState, useMemo } from 'react'
+import { memo, useCallback, useEffect, useState, useMemo } from 'react'
 import type { OnlineTranscriptionConfig, TranscriptionSettings, TranscriptionProvider } from '../../shared/app-state'
 import { TRANSCRIPTION_PROVIDERS } from '../../shared/app-state'
 
@@ -32,6 +32,31 @@ const LANGUAGE_PRESETS = [
   { value: 'en', label: 'EN' },
   { value: 'ja', label: '日本語' },
 ] as const
+
+interface PillButtonProps {
+  active: boolean
+  onClick: () => void
+  disabled?: boolean
+  children: React.ReactNode
+  title?: string
+}
+
+const PillButton = memo(({ active, onClick, disabled, children, title }: PillButtonProps) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    title={title}
+    className={`px-2.5 py-1 text-xs rounded-full border transition-all whitespace-nowrap ${
+      active
+        ? 'bg-orange-50 border-orange-300 text-orange-700 font-medium'
+        : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300'
+    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+  >
+    {children}
+  </button>
+))
+
+PillButton.displayName = 'PillButton'
 
 export const ModelSettings = ({ config, onConfigChange }: ModelSettingsProps) => {
   const [localConfig, setLocalConfig] = useState<TranscriptionSettings>(() => config || DEFAULT_SETTINGS)
@@ -131,11 +156,10 @@ export const ModelSettings = ({ config, onConfigChange }: ModelSettingsProps) =>
   }, [config, localConfig, commitChange])
 
   const handleCustomModelBlur = useCallback(async () => {
-    if (customModelInput) {
-      updateOnlineField({ modelId: customModelInput })
-    }
-    await handleOnlineBlur()
-  }, [customModelInput, updateOnlineField, handleOnlineBlur])
+    if (!customModelInput) return
+    const next = { ...localConfig, online: { ...localConfig.online, modelId: customModelInput } }
+    await commitChange(next)
+  }, [customModelInput, localConfig, commitChange])
 
   const handleLanguageChange = useCallback(async (lang: string) => {
     const next = { ...localConfig, online: { ...localConfig.online, language: lang || undefined } }
@@ -157,10 +181,11 @@ export const ModelSettings = ({ config, onConfigChange }: ModelSettingsProps) =>
 
     try {
       const result = await window.speech.testTranscription()
-      if (result.success) {
+      if (result.success && result.data) {
+        const text = result.data.text
         setTestResult({
           success: true,
-          message: `成功: "${result.text?.slice(0, 20)}${(result.text?.length ?? 0) > 20 ? '...' : ''}"`,
+          message: `成功: "${text.slice(0, 20)}${text.length > 20 ? '...' : ''}"`,
         })
       } else {
         setTestResult({ success: false, message: result.error || '测试失败' })
@@ -174,27 +199,6 @@ export const ModelSettings = ({ config, onConfigChange }: ModelSettingsProps) =>
 
   const isConfigValid = localConfig.online.apiKey && localConfig.online.modelId
     && (currentProvider.id !== 'custom' || localConfig.online.baseUrl)
-
-  const PillButton = ({ active, onClick, disabled, children, title }: {
-    active: boolean
-    onClick: () => void
-    disabled?: boolean
-    children: React.ReactNode
-    title?: string
-  }) => (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      className={`px-2.5 py-1 text-xs rounded-full border transition-all whitespace-nowrap ${
-        active
-          ? 'bg-orange-50 border-orange-300 text-orange-700 font-medium'
-          : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300'
-      } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-    >
-      {children}
-    </button>
-  )
 
   return (
     <div className="space-y-4">
