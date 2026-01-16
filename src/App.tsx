@@ -4,11 +4,12 @@
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import type { SpeechTideState, ShortcutConfig, PolishConfig } from '../shared/app-state'
+import type { SpeechTideState, ShortcutConfig, PolishConfig, TranscriptionSettings } from '../shared/app-state'
 import { DEFAULT_TAP_POLISH_ENABLED, DEFAULT_HOLD_POLISH_ENABLED } from '../shared/app-state'
 import { Onboarding } from './components/Onboarding'
 import { HistoryPanel } from './components/HistoryPanel'
 import { PolishSettings } from './components/PolishSettings'
+import { ModelSettings } from './components/ModelSettings'
 import { useNativeRecorder } from './hooks/useNativeRecorder'
 
 const INITIAL_STATE: SpeechTideState = {
@@ -38,7 +39,7 @@ const STATUS_CONFIG = {
   error: { label: '错误', class: 'recording' },
 } as const
 
-type TabType = 'shortcut' | 'settings' | 'polish'
+type TabType = 'shortcut' | 'model' | 'settings' | 'polish'
 
 /**
  * 主应用组件 - 双栏布局设计
@@ -59,6 +60,7 @@ function App() {
   const [cacheTTLMinutes, setCacheTTLMinutes] = useState(30)
   const [allowBetaUpdates, setAllowBetaUpdates] = useState(false)
   const [polishConfig, setPolishConfig] = useState<PolishConfig | null>(null)
+  const [transcriptionSettings, setTranscriptionSettings] = useState<TranscriptionSettings | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const shortcutInputRef = useRef<HTMLInputElement>(null)
   const pressedKeysRef = useRef<Set<string>>(new Set())
@@ -96,6 +98,7 @@ function App() {
       setCacheTTLMinutes(Number.isFinite(s.cacheTTLMinutes) ? s.cacheTTLMinutes : 30)
       setAllowBetaUpdates(s.allowBetaUpdates ?? false)
       if (s.polish) setPolishConfig(s.polish)
+      if (s.transcription) setTranscriptionSettings(s.transcription)
     })
 
     const disposeAudio = window.speech.onPlayAudio((audioPath) => {
@@ -145,6 +148,12 @@ function App() {
   const handlePolishConfigChange = useCallback(async (config: PolishConfig) => {
     const result = await window.speech.updateSettings({ polish: config })
     if (result.success) setPolishConfig(config)
+    return result
+  }, [])
+
+  const handleTranscriptionSettingsChange = useCallback(async (config: TranscriptionSettings) => {
+    const result = await window.speech.updateSettings({ transcription: config })
+    if (result.success) setTranscriptionSettings(config)
     return result
   }, [])
 
@@ -251,6 +260,11 @@ function App() {
   }
 
   const currentStatus = STATUS_CONFIG[state.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.idle
+  const activeModelId = testResult?.modelId
+    || state.meta?.modelId
+    || (transcriptionSettings?.mode === 'online'
+      ? transcriptionSettings.online.modelId
+      : 'SenseVoice-Small (中文)')
 
   return (
     <div className="h-full flex flex-col bg-[hsl(var(--background))]">
@@ -281,6 +295,11 @@ function App() {
                 <span className="text-sm font-medium text-[hsl(var(--text-secondary))]">
                   {testResult ? '测试结果' : '转录结果'}
                 </span>
+                {activeModelId && (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-[hsl(var(--muted))] text-[hsl(var(--text-tertiary))]">
+                    {activeModelId}
+                  </span>
+                )}
                 {testResult && testResult.processingTime > 0 && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
                     ✓ {(testResult.processingTime / 1000).toFixed(1)}s
@@ -398,7 +417,7 @@ function App() {
           <div className="flex-shrink-0 px-4 pt-3 pb-0 flex gap-1 border-b border-[hsl(var(--border))]">
             <button
               onClick={() => setActiveTab('shortcut')}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors relative ${
+              className={`px-3 py-2 text-[13px] font-medium rounded-t-lg transition-colors relative whitespace-nowrap ${
                 activeTab === 'shortcut'
                   ? 'text-[hsl(var(--primary))] bg-[hsl(var(--card))]'
                   : 'text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] hover:bg-[hsl(var(--muted))]'
@@ -410,8 +429,21 @@ function App() {
               )}
             </button>
             <button
+              onClick={() => setActiveTab('model')}
+              className={`px-3 py-2 text-[13px] font-medium rounded-t-lg transition-colors relative whitespace-nowrap ${
+                activeTab === 'model'
+                  ? 'text-[hsl(var(--primary))] bg-[hsl(var(--card))]'
+                  : 'text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] hover:bg-[hsl(var(--muted))]'
+              }`}
+            >
+              🧠 模型
+              {activeTab === 'model' && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[hsl(var(--primary))]" />
+              )}
+            </button>
+            <button
               onClick={() => setActiveTab('settings')}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors relative ${
+              className={`px-3 py-2 text-[13px] font-medium rounded-t-lg transition-colors relative whitespace-nowrap ${
                 activeTab === 'settings'
                   ? 'text-[hsl(var(--primary))] bg-[hsl(var(--card))]'
                   : 'text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] hover:bg-[hsl(var(--muted))]'
@@ -424,7 +456,7 @@ function App() {
             </button>
             <button
               onClick={() => setActiveTab('polish')}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors relative ${
+              className={`px-3 py-2 text-[13px] font-medium rounded-t-lg transition-colors relative whitespace-nowrap ${
                 activeTab === 'polish'
                   ? 'text-[hsl(var(--primary))] bg-[hsl(var(--card))]'
                   : 'text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] hover:bg-[hsl(var(--muted))]'
@@ -522,6 +554,13 @@ function App() {
               </div>
             )}
 
+            {activeTab === 'model' && (
+              <ModelSettings
+                config={transcriptionSettings}
+                onConfigChange={handleTranscriptionSettingsChange}
+              />
+            )}
+
             {activeTab === 'settings' && (
               <div className="space-y-4">
                 <SettingToggle
@@ -543,24 +582,32 @@ function App() {
                   onChange={(v) => updateSetting('allowBetaUpdates', v)}
                 />
                 <div className="border-t border-[hsl(var(--border))] pt-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-sm text-[hsl(var(--text-primary))]">模型缓存时间</span>
-                      <p className="text-xs text-[hsl(var(--text-tertiary))] mt-0.5">
-                        闲置后自动卸载模型以释放内存
-                      </p>
-                    </div>
-                    <select
-                      value={cacheTTLMinutes}
-                      onChange={(e) => updateSetting('cacheTTLMinutes', Number(e.target.value))}
-                      className="text-sm bg-[hsl(var(--muted))] border-none rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]"
-                    >
-                      <option value={5}>5 分钟</option>
-                      <option value={15}>15 分钟</option>
-                      <option value={30}>30 分钟</option>
-                      <option value={60}>1 小时</option>
-                      <option value={0}>永不卸载</option>
-                    </select>
+                  <div>
+                    <span className="text-sm text-[hsl(var(--text-primary))]">模型缓存时间</span>
+                    <p className="text-xs text-[hsl(var(--text-tertiary))] mt-0.5">
+                      闲置后自动卸载模型以释放内存
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {[
+                      { value: 5, label: '5 分钟' },
+                      { value: 15, label: '15 分钟' },
+                      { value: 30, label: '30 分钟' },
+                      { value: 60, label: '1 小时' },
+                      { value: 0, label: '永不' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => updateSetting('cacheTTLMinutes', opt.value)}
+                        className={`px-2.5 py-1 text-xs rounded-full border transition-all ${
+                          cacheTTLMinutes === opt.value
+                            ? 'bg-[hsl(var(--primary)/0.1)] border-[hsl(var(--primary)/0.5)] text-[hsl(var(--primary))] font-medium'
+                            : 'bg-[hsl(var(--muted))] border-[hsl(var(--border))] text-[hsl(var(--text-secondary))] hover:border-[hsl(var(--text-tertiary))]'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
