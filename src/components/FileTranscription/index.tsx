@@ -52,7 +52,18 @@ export const FileTranscription = () => {
   }, [])
 
   const handleFileSelect = useCallback((file: File) => {
-    const fileWithPath = file as File & { path: string }
+    const fileWithPath = file as File & { path?: string }
+    
+    // Guard: Electron provides file.path, but it may be undefined in other contexts
+    if (!fileWithPath.path) {
+      setState(prev => ({
+        ...prev,
+        status: 'error',
+        error: 'Unable to get file path. Please try again.',
+      }))
+      return
+    }
+    
     setState(prev => ({
       ...prev,
       status: 'selected',
@@ -79,11 +90,11 @@ export const FileTranscription = () => {
     try {
       const result = await window.speech.transcribeFile(state.selectedFile.path)
 
-      if (result.success && result.text) {
+      if (result.success) {
         setState(prev => ({
           ...prev,
           status: 'complete',
-          transcriptionResult: result.text!,
+          transcriptionResult: result.text ?? '',
           progress: 100,
         }))
       } else {

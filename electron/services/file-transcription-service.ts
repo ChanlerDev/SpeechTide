@@ -119,10 +119,13 @@ export class FileTranscriptionService {
     logger.info('开始导出转写结果', { outputPath, fileName })
 
     try {
-      // 展开 ~ 到实际 home 目录
-      const expandedPath = outputPath.startsWith('~')
-        ? path.join(os.homedir(), outputPath.slice(1))
-        : outputPath
+      // Expand ~ to actual home directory
+      // Note: slice(2) to skip "~/" prefix, keeping just the relative path
+      const expandedPath = outputPath.startsWith('~/')
+        ? path.join(os.homedir(), outputPath.slice(2))
+        : outputPath.startsWith('~')
+          ? os.homedir()
+          : outputPath
 
       // 创建输出目录（如果不存在）
       if (!fs.existsSync(expandedPath)) {
@@ -130,8 +133,15 @@ export class FileTranscriptionService {
         logger.debug('创建输出目录', { expandedPath })
       }
 
-      // 确保文件名以 .txt 结尾
-      const finalFileName = fileName.endsWith('.txt') ? fileName : `${fileName}.txt`
+      // Sanitize fileName to prevent directory traversal
+      // Remove any path separators and use only the base name
+      const sanitizedFileName = path.basename(fileName.replace(/[/\\]/g, '_'))
+      if (!sanitizedFileName || sanitizedFileName === '.' || sanitizedFileName === '..') {
+        return { success: false, error: 'Invalid file name' }
+      }
+
+      // Ensure file name ends with .txt
+      const finalFileName = sanitizedFileName.endsWith('.txt') ? sanitizedFileName : `${sanitizedFileName}.txt`
       const fullPath = path.join(expandedPath, finalFileName)
 
       // 写入文件

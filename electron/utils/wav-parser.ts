@@ -35,7 +35,9 @@ export async function extractPcmData(
   }
 
   const dataOffset = findDataChunkOffset(buffer)
-  const rawPcm = buffer.subarray(dataOffset)
+  // Read only dataLength bytes, not the entire remaining buffer
+  // (WAV files can have chunks after 'data')
+  const rawPcm = buffer.subarray(dataOffset, dataOffset + info.dataLength)
   const samples = pcmToFloat32(rawPcm, info.bitsPerSample, info.channels)
 
   return { samples, sampleRate: info.sampleRate }
