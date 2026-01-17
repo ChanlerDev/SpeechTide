@@ -91,7 +91,7 @@ export const ModelSettings = ({ config, onConfigChange }: ModelSettingsProps) =>
 
   const commitChange = useCallback(async (next: TranscriptionSettings, fallback?: TranscriptionSettings) => {
     const normalized = next.mode === 'online'
-      ? { ...next, online: { ...next.online, responseFormat: 'json' } }
+      ? { ...next, online: { ...next.online, responseFormat: 'json' as const } }
       : next
     setLocalConfig(normalized)
     setSaving(true)
