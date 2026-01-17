@@ -144,3 +144,61 @@ export interface TranscriptionSettings {
   mode: TranscriptionMode
   online: OnlineTranscriptionConfig
 }
+
+// === File Transcription Types ===
+
+/** File transcription status */
+export type FileTranscriptionStatus = 'idle' | 'selected' | 'transcribing' | 'complete' | 'error'
+
+/** File transcription state */
+export interface FileTranscriptionState {
+  status: FileTranscriptionStatus
+  selectedFile?: {
+    name: string
+    path: string
+    size: number
+  }
+  progress: number
+  result?: {
+    text: string
+    durationMs: number
+  }
+  error?: string
+  outputConfig: {
+    directory: string
+    fileName: string
+  }
+}
+
+/** Transcribe file request */
+export interface TranscribeFileRequest {
+  filePath: string
+}
+
+/** Transcribe file response */
+export interface TranscribeFileResponse {
+  success: boolean
+  text?: string
+  durationMs?: number
+  error?: string
+}
+
+/** Export transcription request */
+export interface ExportTranscriptionRequest {
+  text: string
+  outputPath: string
+  fileName: string
+}
+
+/** Export transcription response */
+export interface ExportTranscriptionResponse {
+  success: boolean
+  fullPath?: string
+  error?: string
+}
+
+/** Select directory response */
+export interface SelectDirectoryResponse {
+  path: string | null
+  canceled: boolean
+}
