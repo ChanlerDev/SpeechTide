@@ -72,7 +72,9 @@ export class FileTranscriptionService {
     onProgress?.(0)
 
     try {
-      // 确保转写器可用
+      // 每次转录时重新获取配置并创建转写器，确保使用最新设置
+      // 这样可以正确响应用户在设置中切换离线/在线模式
+      this.destroyTranscriber()
       const transcriber = this.ensureTranscriber()
 
       // 报告转写中进度
@@ -163,6 +165,13 @@ export class FileTranscriptionService {
    * 销毁服务，释放资源
    */
   destroy(): void {
+    this.destroyTranscriber()
+  }
+
+  /**
+   * 销毁转写器
+   */
+  private destroyTranscriber(): void {
     if (this.transcriber) {
       logger.info('销毁转写器')
       this.transcriber.destroy?.()
@@ -177,6 +186,7 @@ export class FileTranscriptionService {
     if (!this.transcriber) {
       logger.info('创建转写器实例')
       const config = this.getTranscriberConfig()
+      logger.info('转写器配置', { engine: (config as { engine?: string }).engine ?? 'sensevoice' })
       this.transcriber = createTranscriber(config, { supportDir: this.supportDir })
     }
     return this.transcriber
