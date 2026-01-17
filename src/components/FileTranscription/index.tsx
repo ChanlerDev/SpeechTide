@@ -3,16 +3,22 @@
  * 支持拖放或选择音频文件进行转录
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { DropZone } from './DropZone'
 import { TranscriptionProgress } from './TranscriptionProgress'
 import { TranscriptionResult } from './TranscriptionResult'
 
 type TranscriptionState = 'idle' | 'selected' | 'transcribing' | 'complete' | 'error'
 
+interface SelectedFileInfo {
+  name: string
+  path: string
+  size: number
+}
+
 interface FileTranscriptionState {
   status: TranscriptionState
-  selectedFile: File | null
+  selectedFile: SelectedFileInfo | null
   transcriptionResult: string
   outputPath: string
   fileName: string
@@ -38,11 +44,23 @@ export const FileTranscription = () => {
     error: null,
   })
 
+  useEffect(() => {
+    const dispose = window.speech.onTranscribeProgress((progress) => {
+      setState(prev => ({ ...prev, progress }))
+    })
+    return dispose
+  }, [])
+
   const handleFileSelect = useCallback((file: File) => {
+    const fileWithPath = file as File & { path: string }
     setState(prev => ({
       ...prev,
       status: 'selected',
-      selectedFile: file,
+      selectedFile: {
+        name: file.name,
+        path: fileWithPath.path,
+        size: file.size,
+      },
       fileName: getDefaultFileName(file.name),
       error: null,
     }))
@@ -59,34 +77,20 @@ export const FileTranscription = () => {
     }))
 
     try {
-      // TODO: 实现实际的 IPC 调用
-      // const result = await window.speech.transcribeFile(state.selectedFile.path)
-      
-      // Mock: 模拟转录过程
-      for (let i = 0; i <= 100; i += 10) {
-        await new Promise(resolve => setTimeout(resolve, 200))
-        setState(prev => ({ ...prev, progress: i }))
-      }
+      const result = await window.speech.transcribeFile(state.selectedFile.path)
 
-      // Mock: 模拟转录结果
-      const mockResult = {
-        success: true,
-        text: '这是一段模拟的转录结果文本。实际使用时，这里会显示从音频文件中识别出的内容。',
-        error: null,
-      }
-
-      if (mockResult.success) {
+      if (result.success && result.text) {
         setState(prev => ({
           ...prev,
           status: 'complete',
-          transcriptionResult: mockResult.text,
+          transcriptionResult: result.text!,
           progress: 100,
         }))
       } else {
         setState(prev => ({
           ...prev,
           status: 'error',
-          error: mockResult.error || '转录失败',
+          error: result.error || '转录失败',
         }))
       }
     } catch (err) {
@@ -100,19 +104,21 @@ export const FileTranscription = () => {
 
   const handleExport = useCallback(async () => {
     try {
-      // TODO: 实现实际的 IPC 调用
-      // const result = await window.speech.exportTranscription({
-      //   text: state.transcriptionResult,
-      //   outputPath: state.outputPath,
-      //   fileName: state.fileName,
-      // })
+      const result = await window.speech.exportTranscription({
+        text: state.transcriptionResult,
+        outputPath: state.outputPath,
+        fileName: state.fileName,
+      })
       
-      // Mock: 模拟导出成功
-      alert(`导出成功！\n文件路径: ${state.outputPath}${state.fileName}.txt`)
+      if (result.success) {
+        alert(`导出成功！\n文件路径: ${result.fullPath}`)
+      } else {
+        alert('导出失败: ' + (result.error || '未知错误'))
+      }
     } catch (err) {
       alert('导出失败: ' + (err instanceof Error ? err.message : '未知错误'))
     }
-  }, [state.outputPath, state.fileName])
+  }, [state.outputPath, state.fileName, state.transcriptionResult])
 
   const handleCopy = useCallback(async () => {
     try {
@@ -136,14 +142,10 @@ export const FileTranscription = () => {
 
   const handleSelectDirectory = useCallback(async () => {
     try {
-      // TODO: 实现实际的 IPC 调用
-      // const result = await window.speech.selectDirectory()
-      // if (result.path) {
-      //   setState(prev => ({ ...prev, outputPath: result.path }))
-      // }
-      
-      // Mock: 暂时不做任何操作
-      console.log('选择目录功能待实现')
+      const result = await window.speech.selectDirectory()
+      if (result.path && !result.canceled) {
+        setState(prev => ({ ...prev, outputPath: result.path + '/' }))
+      }
     } catch (err) {
       console.error('选择目录失败:', err)
     }

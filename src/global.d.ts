@@ -95,6 +95,11 @@ declare global {
       deleteHistoryItem: (sessionId: string) => Promise<{ success: boolean; error?: string }>
       playHistoryAudio: (sessionId: string) => Promise<{ success: boolean; error?: string }>
       onPlayAudio: (callback: (audioPath: string) => void) => () => void
+      // 文件转录 API
+      transcribeFile: (filePath: string) => Promise<{ success: boolean; text?: string; durationMs?: number; error?: string }>
+      onTranscribeProgress: (callback: (progress: number) => void) => () => void
+      exportTranscription: (options: { text: string; outputPath: string; fileName: string }) => Promise<{ success: boolean; fullPath?: string; error?: string }>
+      selectDirectory: () => Promise<{ path: string | null; canceled: boolean }>
     }
     onboarding: {
       getState: () => Promise<OnboardingState>
