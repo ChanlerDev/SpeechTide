@@ -10,6 +10,7 @@ import { Onboarding } from './components/Onboarding'
 import { HistoryPanel } from './components/HistoryPanel'
 import { PolishSettings } from './components/PolishSettings'
 import { ModelSettings } from './components/ModelSettings'
+import { FileTranscription } from './components/FileTranscription'
 import { useNativeRecorder } from './hooks/useNativeRecorder'
 
 const INITIAL_STATE: SpeechTideState = {
@@ -39,7 +40,7 @@ const STATUS_CONFIG = {
   error: { label: '错误', class: 'recording' },
 } as const
 
-type TabType = 'shortcut' | 'model' | 'settings' | 'polish'
+type TabType = 'shortcut' | 'model' | 'settings' | 'polish' | 'file'
 
 /**
  * 主应用组件 - 双栏布局设计
@@ -467,6 +468,19 @@ function App() {
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[hsl(var(--primary))]" />
               )}
             </button>
+            <button
+              onClick={() => setActiveTab('file')}
+              className={`px-3 py-2 text-[13px] font-medium rounded-t-lg transition-colors relative whitespace-nowrap ${
+                activeTab === 'file'
+                  ? 'text-[hsl(var(--primary))] bg-[hsl(var(--card))]'
+                  : 'text-[hsl(var(--text-secondary))] hover:text-[hsl(var(--text-primary))] hover:bg-[hsl(var(--muted))]'
+              }`}
+            >
+              📁 文件转录
+              {activeTab === 'file' && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[hsl(var(--primary))]" />
+              )}
+            </button>
           </div>
 
           {/* 标签页内容 */}
@@ -625,6 +639,10 @@ function App() {
                 config={polishConfig}
                 onConfigChange={handlePolishConfigChange}
               />
+            )}
+
+            {activeTab === 'file' && (
+              <FileTranscription />
             )}
           </div>
         </div>

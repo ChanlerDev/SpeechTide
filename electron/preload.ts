@@ -15,6 +15,31 @@ const speechAPI = {
       ipcRenderer.off('speech:state', listener)
     }
   },
+
+  // === 文件转录 API ===
+
+  /** 转录音频文件 */
+  transcribeFile(filePath: string) {
+    return ipcRenderer.invoke('speech:transcribe-file', filePath)
+  },
+  /** 监听转录进度 */
+  onTranscribeProgress(callback: (progress: number) => void) {
+    const listener = (_event: IpcRendererEvent, progress: number) => {
+      callback(progress)
+    }
+    ipcRenderer.on('speech:transcribe-file-progress', listener)
+    return () => {
+      ipcRenderer.off('speech:transcribe-file-progress', listener)
+    }
+  },
+  /** 导出转录结果到文件 */
+  exportTranscription(options: { text: string; outputPath: string; fileName: string }) {
+    return ipcRenderer.invoke('speech:export-transcription', options)
+  },
+  /** 选择目录 */
+  selectDirectory() {
+    return ipcRenderer.invoke('speech:select-directory')
+  },
   /** 主动获取当前状态 */
   getState() {
     return ipcRenderer.invoke('speech:get-state')

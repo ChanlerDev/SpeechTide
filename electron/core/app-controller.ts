@@ -28,6 +28,8 @@ import { metrics } from '../utils/metrics'
 import { onboardingService } from '../services/onboarding-service'
 import { updateService } from '../services/update-service'
 import { PolishEngine } from '../services/polish-engine'
+import { FileTranscriptionService } from '../services/file-transcription-service'
+import { dialog } from 'electron'
 
 const logger = createModuleLogger('app-controller')
 
@@ -53,6 +55,7 @@ export class AppController {
   private readonly conversationStore = new ConversationStore(this.conversationsDir)
   private readonly appleScriptInserter = new AppleScriptTextInserter()
   private polishEngine: PolishEngine | null = null  // 润色引擎
+  private fileTranscriptionService: FileTranscriptionService | null = null  // 文件转录服务
 
   // 状态
   private initialized = false
@@ -107,6 +110,7 @@ export class AppController {
     this.initServices()
     this.registerIPC()
     this.registerNativeRecordingIPC()
+    this.registerFileTranscriptionIPC()
     this.setupStateListeners()
 
     // 应用 beta 更新设置
@@ -386,6 +390,54 @@ export class AppController {
     ipcMain.on('native-recorder:complete', (_event, data: ArrayBuffer | null) => {
       this.audioRecorder.finishNativeRecording(data ? Buffer.from(data) : undefined)
     })
+  }
+
+  /**
+   * 注册文件转录 IPC 处理器
+   */
+  private registerFileTranscriptionIPC(): void {
+    // 转录文件
+    ipcMain.handle('speech:transcribe-file', async (_event, filePath: string) => {
+      logger.info('收到文件转录请求', { filePath })
+      const service = this.ensureFileTranscriptionService()
+      const result = await service.transcribeFile(filePath, (progress) => {
+        this.windowService?.send('speech:transcribe-file-progress', progress)
+      })
+      return result
+    })
+
+    // 导出转录结果
+    ipcMain.handle('speech:export-transcription', async (_event, options: { text: string; outputPath: string; fileName: string }) => {
+      logger.info('收到导出转录请求', { outputPath: options.outputPath, fileName: options.fileName })
+      const service = this.ensureFileTranscriptionService()
+      return service.exportTranscription(options)
+    })
+
+    // 选择目录
+    ipcMain.handle('speech:select-directory', async () => {
+      const mainWindow = this.windowService?.getWindow()
+      const result = await dialog.showOpenDialog(mainWindow!, {
+        properties: ['openDirectory', 'createDirectory'],
+        title: '选择输出目录',
+      })
+      return {
+        path: result.filePaths[0] || null,
+        canceled: result.canceled,
+      }
+    })
+  }
+
+  /**
+   * 确保文件转录服务可用
+   */
+  private ensureFileTranscriptionService(): FileTranscriptionService {
+    if (!this.fileTranscriptionService) {
+      this.fileTranscriptionService = new FileTranscriptionService({
+        supportDir: this.supportDir,
+        transcriberConfig: () => this.resolveTranscriberConfig(),
+      })
+    }
+    return this.fileTranscriptionService
   }
 
   /**
@@ -999,6 +1051,9 @@ export class AppController {
     // 终止 transcriber worker 进程
     this.transcriber?.destroy?.()
     this.transcriber = null
+    // 终止文件转录服务
+    this.fileTranscriptionService?.destroy()
+    this.fileTranscriptionService = null
     this.initialized = false
   }
 }

@@ -64,16 +64,16 @@ export const APP_CONSTANTS = {
  * 窗口配置 - 双栏布局
  */
 export const WINDOW_CONFIG = {
-  /** 基础宽度（左栏300 + 右栏380） */
-  width: 680,
+  /** 基础宽度（左栏300 + 右栏430） */
+  width: 730,
   /** 基础高度 */
   height: 540,
   /** 最小宽度 */
-  minWidth: 600,
+  minWidth: 650,
   /** 最小高度 */
   minHeight: 480,
   /** 最大宽度 */
-  maxWidth: 800,
+  maxWidth: 840,
   /** 最大高度 */
   maxHeight: 700,
 } as const
