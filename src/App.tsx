@@ -288,7 +288,7 @@ function App() {
       {/* 双栏主体 */}
       <div className="flex-1 flex min-h-0">
         {/* 左栏 - 转录结果 */}
-        <div className="w-[280px] flex-shrink-0 flex flex-col border-r border-[hsl(var(--border))]">
+        <div className="w-[300px] flex-shrink-0 flex flex-col border-r border-[hsl(var(--border))]">
           {/* 转录结果卡片 */}
           <div className="flex-1 p-4 flex flex-col min-h-0">
             <div className="flex items-center justify-between mb-3">
