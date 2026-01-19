@@ -24,18 +24,18 @@ const CORRECTION_TOOL = {
   type: 'function' as const,
   function: {
     name: 'return_correction',
-    description: 'Return the correction result for the transcription as structured data.',
+    description: 'Return the processed result for the transcription as structured data.',
     parameters: {
       type: 'object',
       properties: {
         status: {
           type: 'string',
           enum: ['ok', 'filtered'],
-          description: 'Use ok when the correction succeeds. Use filtered when safety policies prevent modification and the original text must be kept.',
+          description: 'Use ok when the processing succeeds. Use filtered when safety policies prevent modification and the original text must be kept.',
         },
         text: {
           type: 'string',
-          description: 'The corrected transcription text, or the original text when status is filtered or no change is required.',
+          description: 'The processed transcription text, or the original text when status is filtered or no change is required.',
         },
         reason: {
           type: 'string',
