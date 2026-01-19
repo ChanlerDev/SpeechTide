@@ -16,7 +16,7 @@ const PROVIDER_OPTIONS = [
   { value: 'deepseek', label: 'DeepSeek', defaultModel: 'deepseek-chat', defaultBaseUrl: 'https://api.deepseek.com/v1' },
 ] as const
 
-const DEFAULT_PROMPT = '你是一个语音转文字的润色助手。用户输入的是语音识别后的原始文本，可能包含口语化表达、重复、填充词等。请将其润色为流畅、简洁的书面文本，保持原意不变。只输出润色后的文本，不要添加任何解释或额外内容。'
+const DEFAULT_PROMPT = ''
 
 export const PolishSettings = ({ config, onConfigChange }: PolishSettingsProps) => {
   const [localConfig, setLocalConfig] = useState<PolishConfig>(() => config || {
@@ -239,6 +239,7 @@ export const PolishSettings = ({ config, onConfigChange }: PolishSettingsProps) 
                     onChange={handlePromptChange}
                     onBlur={handlePromptBlur}
                     rows={4}
+                    placeholder="留空使用内置默认提示词（语音转写纠正助手）"
                     className="w-full mt-1.5 px-3 py-2 text-xs border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:border-orange-300 focus:ring-1 focus:ring-orange-100 resize-none"
                   />
                 </div>
