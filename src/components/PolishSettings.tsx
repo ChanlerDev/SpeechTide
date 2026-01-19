@@ -1,5 +1,5 @@
 /**
- * AI 润色设置组件
+ * AI 纠正设置组件
  * 配置 API 提供商、密钥、模型和提示词
  */
 
@@ -128,7 +128,7 @@ export const PolishSettings = ({ config, onConfigChange }: PolishSettingsProps) 
       {/* 提示信息 */}
       <div className="flex items-center gap-2 px-3 py-2 bg-orange-50 border border-orange-100 rounded-lg">
         <span className="text-orange-500">💡</span>
-        <span className="text-xs text-orange-700">在「快捷键」标签页的录音模式中可单独控制各模式是否启用 AI 润色</span>
+        <span className="text-xs text-orange-700">在「快捷键」标签页的录音模式中可单独控制各模式是否启用 AI 纠正</span>
       </div>
 
       {/* 设置卡片 */}
@@ -250,7 +250,7 @@ export const PolishSettings = ({ config, onConfigChange }: PolishSettingsProps) 
           {/* 状态提示 */}
           {!isConfigValid && (
             <p className="text-xs text-amber-600 bg-amber-50 px-2 py-1.5 rounded">
-              请填写 API 密钥以启用润色功能
+              请填写 API 密钥以启用纠正功能
             </p>
           )}
         </div>
