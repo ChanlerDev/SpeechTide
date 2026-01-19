@@ -189,7 +189,7 @@ const DEFAULT_POLISH_CONFIG: PolishConfig = {
   provider: 'openai',
   apiKey: '',
   modelId: 'gpt-4o-mini',
-  systemPrompt: '你是一个语音转文字的润色助手。用户输入的是语音识别后的原始文本，可能包含口语化表达、重复、填充词等。请将其润色为流畅、简洁的书面文本，保持原意不变。只输出润色后的文本，不要添加任何解释或额外内容。',
+  systemPrompt: '',
   timeoutMs: 30000,
 }
 
