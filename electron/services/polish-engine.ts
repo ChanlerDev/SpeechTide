@@ -78,7 +78,7 @@ function getBaseUrl(config: PolishConfig): string {
 }
 
 /**
- * AI 润色引擎类
+ * AI 纠正引擎类
  */
 export class PolishEngine {
   private config: PolishConfig
@@ -92,7 +92,7 @@ export class PolishEngine {
    */
   updateConfig(config: PolishConfig): void {
     this.config = config
-    logger.info('润色引擎配置已更新', { provider: config.provider, modelId: config.modelId })
+    logger.info('纠正引擎配置已更新', { provider: config.provider, modelId: config.modelId })
   }
 
   /**
