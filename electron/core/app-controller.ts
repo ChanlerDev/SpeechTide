@@ -578,9 +578,13 @@ export class AppController {
         if (polishResult.success && polishResult.text) {
           finalText = polishResult.text
           polished = true
-          logger.info('AI 润色完成', { sessionId, durationMs: polishResult.durationMs })
+          if (polishResult.filtered) {
+            logger.warn('AI 纠正内容被过滤', { sessionId, reason: polishResult.filterReason })
+          } else {
+            logger.info('AI 纠正完成', { sessionId, durationMs: polishResult.durationMs })
+          }
         } else {
-          logger.warn('AI 润色失败，回退到原始文本', { error: polishResult.error })
+          logger.warn('AI 纠正失败，回退到原始文本', { error: polishResult.error })
         }
       }
 
