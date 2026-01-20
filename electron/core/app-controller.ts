@@ -726,10 +726,11 @@ export class AppController {
     logger.info('停止录音，开始转写', { sessionId, triggerType })
 
     const transcriptionTimer = metrics.startTimer('transcription', sessionId)
+    const nativeHandle = handle as NativeRecordingHandle
     let recordingResult: RecordingResult | undefined
 
     try {
-      recordingResult = await handle.stop()
+      recordingResult = await nativeHandle.stop()
       const transcriber = this.ensureTranscriber()
       const transcription = await transcriber.transcribe(recordingResult.audioPath)
       metrics.endTimer(transcriptionTimer, 'transcription', {
@@ -1228,9 +1229,9 @@ export class AppController {
     this.cancelTranscriberUnload()  // 清理缓存计时器
     if (this.activeRecording) {
       if (this.activeRecording.kind === 'native') {
-        this.activeRecording.handle.forceStop()
+        (this.activeRecording.handle as NativeRecordingHandle).forceStop()
       } else {
-        void this.activeRecording.handle.stop().catch(() => {})
+        void (this.activeRecording.handle as AppleDictationHandle).stop().catch(() => {})
       }
       this.activeRecording = null
     }

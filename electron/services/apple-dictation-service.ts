@@ -39,19 +39,21 @@ type HelperMessage =
   | { type: 'final'; sessionId: string; text: string; durationMs: number; audioPath?: string }
   | { type: 'error'; requestId?: string; sessionId?: string; message: string }
 
+interface ActiveSession {
+  sessionId: string
+  audioPath: string
+  onPartial: (text: string) => void
+  onFinal: (text: string, durationMs: number) => void
+  onError: (error: Error) => void
+  resolveFinal: (result: AppleDictationResult) => void
+  rejectFinal: (error: Error) => void
+}
+
 export class AppleDictationService {
   private process: ChildProcessWithoutNullStreams | null = null
   private buffer = ''
   private pending = new Map<string, PendingRequest<unknown>>()
-  private activeSession: {
-    sessionId: string
-    audioPath: string
-    onPartial: (text: string) => void
-    onFinal: (text: string, durationMs: number) => void
-    onError: (error: Error) => void
-    resolveFinal: (result: AppleDictationResult) => void
-    rejectFinal: (error: Error) => void
-  } | null = null
+  private activeSession: ActiveSession | null = null
 
   destroy(): void {
     if (this.process && !this.process.killed) {
@@ -110,8 +112,9 @@ export class AppleDictationService {
       throw new Error('Apple 听写进程未就绪')
     }
 
+    let currentSession: ActiveSession | null = null
     const finalPromise = new Promise<AppleDictationResult>((resolve, reject) => {
-      this.activeSession = {
+      currentSession = {
         sessionId: options.sessionId,
         audioPath: options.audioPath,
         onPartial: handlers.onPartial,
@@ -120,13 +123,14 @@ export class AppleDictationService {
         resolveFinal: resolve,
         rejectFinal: reject,
       }
+      this.activeSession = currentSession
     })
 
     try {
-      await this.sendRequest('start', options)
+      await this.sendRequest('start', options as unknown as Record<string, unknown>)
     } catch (error) {
-      if (this.activeSession?.sessionId === options.sessionId) {
-        this.activeSession.rejectFinal(error instanceof Error ? error : new Error(String(error)))
+      if (currentSession && this.activeSession === currentSession) {
+        (currentSession as ActiveSession).rejectFinal(error instanceof Error ? error : new Error(String(error)))
         this.activeSession = null
       }
       throw error
@@ -267,7 +271,7 @@ export class AppleDictationService {
     }
   }
 
-  private sendRequest<T>(type: string, payload: Record<string, unknown>): Promise<T> {
+  private sendRequest<T>(type: string, payload: object): Promise<T> {
     if (!this.process || this.process.killed) {
       return Promise.reject(new Error('Apple 听写进程未启动'))
     }

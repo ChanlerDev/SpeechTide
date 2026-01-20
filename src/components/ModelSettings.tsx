@@ -21,12 +21,14 @@ const DEFAULT_ONLINE_CONFIG: OnlineTranscriptionConfig = {
   timeoutMs: 120000,
 }
 
+const DEFAULT_APPLE_CONFIG: AppleDictationConfig = {
+  requireOnDevice: false,
+}
+
 const DEFAULT_SETTINGS: TranscriptionSettings = {
   mode: 'offline',
   online: DEFAULT_ONLINE_CONFIG,
-  apple: {
-    requireOnDevice: false,
-  },
+  apple: DEFAULT_APPLE_CONFIG,
 }
 
 const LANGUAGE_PRESETS = [
@@ -89,7 +91,7 @@ export const ModelSettings = ({ config, onConfigChange }: ModelSettingsProps) =>
         ...DEFAULT_SETTINGS,
         ...config,
         apple: {
-          ...DEFAULT_SETTINGS.apple,
+          requireOnDevice: DEFAULT_APPLE_CONFIG.requireOnDevice,
           ...config.apple,
         },
       })
@@ -128,11 +130,11 @@ export const ModelSettings = ({ config, onConfigChange }: ModelSettingsProps) =>
     const base = next.mode === 'online'
       ? { ...next, online: { ...next.online, responseFormat: 'json' as const } }
       : next
-    const normalized = {
+    const normalized: TranscriptionSettings = {
       ...base,
       apple: {
-        ...DEFAULT_SETTINGS.apple,
-        ...base.apple,
+        requireOnDevice: base.apple?.requireOnDevice ?? DEFAULT_APPLE_CONFIG.requireOnDevice,
+        locale: base.apple?.locale,
       },
     }
     setLocalConfig(normalized)
