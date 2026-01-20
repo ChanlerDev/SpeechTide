@@ -265,7 +265,9 @@ function App() {
     || state.meta?.modelId
     || (transcriptionSettings?.mode === 'online'
       ? transcriptionSettings.online.modelId
-      : 'SenseVoice-Small (中文)')
+      : transcriptionSettings?.mode === 'apple'
+        ? 'Apple 原生听写'
+        : 'SenseVoice-Small (中文)')
 
   return (
     <div className="h-full flex flex-col bg-[hsl(var(--background))]">

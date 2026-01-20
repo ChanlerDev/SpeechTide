@@ -6,6 +6,7 @@
 
 import { app, clipboard } from 'electron'
 import path from 'node:path'
+import fsPromises from 'node:fs/promises'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import type { SpeechTideState, TranscriptionMeta, TriggerType } from '../../shared/app-state'
@@ -22,13 +23,14 @@ import { createTranscriber, Transcriber, type OpenAITranscriberConfig } from '..
 import { getDefaultSupportDirectory, loadRecorderConfig, loadTranscriberConfig, loadAppSettings, saveAppSettings } from '../config'
 import { ConversationStore } from '../storage/conversation-store'
 import { AppleScriptTextInserter } from '../utils/apple-script'
-import { STATUS_LABEL, DEFAULT_TEST_AUDIO_URL, APP_CONSTANTS } from '../config/constants'
+import { STATUS_LABEL, STATUS_HINT, DEFAULT_TEST_AUDIO_URL, APP_CONSTANTS } from '../config/constants'
 import { createModuleLogger } from '../utils/logger'
 import { metrics } from '../utils/metrics'
 import { onboardingService } from '../services/onboarding-service'
 import { updateService } from '../services/update-service'
 import { PolishEngine } from '../services/polish-engine'
 import { FileTranscriptionService } from '../services/file-transcription-service'
+import { AppleDictationService, type AppleDictationHandle } from '../services/apple-dictation-service'
 import { dialog } from 'electron'
 
 const logger = createModuleLogger('app-controller')
@@ -51,6 +53,7 @@ export class AppController {
   // 测试音频存储在 assets 目录（持久化，不会被系统清空）
   private readonly testAudioPath = path.join(this.supportDir, 'assets', 'test-audio.wav')
   private readonly audioRecorder = new AudioRecorder(this.conversationsDir, this.recorderConfig)
+  private readonly appleDictationService = new AppleDictationService()
   private transcriber: Transcriber | null = null  // 懒加载，支持动态卸载
   private readonly conversationStore = new ConversationStore(this.conversationsDir)
   private readonly appleScriptInserter = new AppleScriptTextInserter()
@@ -59,7 +62,7 @@ export class AppController {
 
   // 状态
   private initialized = false
-  private activeRecording: { sessionId: string; handle: RecordingHandle | NativeRecordingHandle; timeout?: NodeJS.Timeout; recordingTimer?: string } | null = null
+  private activeRecording: { sessionId: string; kind: 'native' | 'apple'; handle: RecordingHandle | NativeRecordingHandle | AppleDictationHandle; timeout?: NodeJS.Timeout; recordingTimer?: string; appleRequireOnDevice?: boolean; appleLocale?: string; appleAudioPath?: string } | null = null
   private idleTimer: NodeJS.Timeout | null = null
   private cacheTimer: NodeJS.Timeout | null = null  // 模型缓存卸载计时器
   private testInProgress = false
@@ -285,6 +288,9 @@ export class AppController {
           return { success: false, error: String(error) }
         }
       },
+      getAppleDictationStatus: async () => {
+        return this.appleDictationService.getStatus()
+      },
       checkAppleScriptPermission: async () => {
         if (!this.appleScriptInserter.isAvailable()) {
           return { available: false, hasPermission: false, message: '仅在 macOS 上可用' }
@@ -509,11 +515,28 @@ export class AppController {
       if (!mainWindow || mainWindow.isDestroyed()) {
         throw new Error('窗口未初始化或已销毁，无法录音')
       }
+      const mode = this.settings.transcription?.mode ?? 'offline'
+      if (mode === 'apple') {
+        this.activeRecording = {
+          sessionId,
+          handle: null as unknown as AppleDictationHandle,
+          timeout: undefined,
+          recordingTimer,
+          kind: 'apple',
+        }
+        try {
+          await this.startAppleDictation(sessionId)
+        } catch {
+          this.activeRecording = null
+        }
+        return
+      }
+
       const handle = await this.audioRecorder.start(sessionId, mainWindow)
       const timeout = undefined
 
       this.cancelIdleTimer()
-      this.activeRecording = { sessionId, handle, timeout, recordingTimer }
+      this.activeRecording = { sessionId, handle, timeout, recordingTimer, kind: 'native' }
 
       const meta: TranscriptionMeta = { sessionId }
       this.stateMachine.setRecording(meta)
@@ -521,6 +544,161 @@ export class AppController {
     } catch (error) {
       this.handleError('启动录音失败', error)
     }
+  }
+
+  private async startAppleDictation(sessionId: string): Promise<void> {
+    if (!isMac) {
+      this.handleError('Apple 听写仅支持 macOS', new Error('平台不支持'), sessionId)
+      return
+    }
+
+    try {
+      const { audioPath } = await this.ensureConversationFolder(sessionId)
+      const appleConfig = this.settings.transcription?.apple
+      let requireOnDevice = appleConfig?.requireOnDevice ?? false
+      const locale = appleConfig?.locale
+      const status = await this.appleDictationService.getStatus()
+      if (!status.available) {
+        throw new Error(status.reason || 'Apple 听写不可用')
+      }
+      if (requireOnDevice && !status.supportsOnDevice) {
+        requireOnDevice = false
+      }
+      const segmentDurationMs = requireOnDevice ? undefined : 55000
+      const handle = await this.appleDictationService.start(
+        {
+          sessionId,
+          requireOnDevice,
+          locale,
+          audioPath,
+          segmentDurationMs,
+        },
+        {
+          onPartial: (text) => {
+            const meta: TranscriptionMeta = { sessionId }
+            this.stateMachine.setState('recording', STATUS_HINT.recording, { transcript: text, meta })
+          },
+          onFinal: () => {},
+          onError: (error) => {
+            this.handleError('Apple 听写失败', error, sessionId)
+          },
+        }
+      )
+
+      this.cancelIdleTimer()
+      if (this.activeRecording?.sessionId === sessionId) {
+        this.activeRecording.handle = handle
+        this.activeRecording.appleRequireOnDevice = requireOnDevice
+        this.activeRecording.appleLocale = locale
+        this.activeRecording.appleAudioPath = audioPath
+      }
+      const meta: TranscriptionMeta = { sessionId }
+      this.stateMachine.setRecording(meta)
+      logger.info('开始 Apple 原生听写', { sessionId, requireOnDevice, locale })
+    } catch (error) {
+      this.handleError('启动 Apple 听写失败', error, sessionId)
+    }
+  }
+
+  private async stopAppleDictation(
+    handle: AppleDictationHandle,
+    sessionId: string,
+    requireOnDevice: boolean,
+    locale: string | undefined,
+    audioPath: string | undefined,
+    message?: string,
+    triggerType: TriggerType = 'hold'
+  ): Promise<void> {
+    const meta: TranscriptionMeta = { sessionId }
+    this.stateMachine.setTranscribing(message ?? '结束听写，整理结果…', meta)
+    logger.info('停止 Apple 听写', { sessionId, triggerType })
+
+    const transcriptionTimer = metrics.startTimer('transcription', sessionId)
+    try {
+      const result = await handle.stop()
+      const modelId = requireOnDevice ? 'Apple 本地听写' : 'Apple 原生听写'
+      metrics.endTimer(transcriptionTimer, 'transcription', {
+        sessionId,
+        durationMs: result.durationMs,
+        modelId,
+      })
+
+      let finalText = result.text
+      let polished = false
+
+      const shortcutConfig = this.settings.shortcut
+      const polishEnabled = triggerType === 'tap'
+        ? (shortcutConfig.tapPolishEnabled ?? DEFAULT_TAP_POLISH_ENABLED)
+        : (shortcutConfig.holdPolishEnabled ?? DEFAULT_HOLD_POLISH_ENABLED)
+      const shouldPolish = polishEnabled && this.polishEngine?.isConfigValid()
+
+      if (shouldPolish) {
+        const nextMeta: TranscriptionMeta = {
+          sessionId,
+          durationMs: result.durationMs,
+          modelId,
+          language: locale,
+        }
+        this.stateMachine.setPolishing(undefined, nextMeta)
+        logger.info('开始 AI 润色', { sessionId })
+
+        const polishResult = await this.polishEngine!.polish(result.text)
+        if (polishResult.success && polishResult.text) {
+          finalText = polishResult.text
+          polished = true
+          if (polishResult.filtered) {
+            logger.warn('AI 纠正内容被过滤', { sessionId, reason: polishResult.filterReason })
+          } else {
+            logger.info('AI 纠正完成', { sessionId, durationMs: polishResult.durationMs })
+          }
+        } else {
+          logger.warn('AI 纠正失败，回退到原始文本', { error: polishResult.error })
+        }
+      }
+
+      const record: ConversationRecord = {
+        id: sessionId,
+        startedAt: Date.now() - result.durationMs,
+        finishedAt: Date.now(),
+        durationMs: result.durationMs,
+        audioPath: result.audioPath,
+        transcript: finalText,
+        modelId: polished ? `${modelId} + AI` : modelId,
+        language: locale,
+      }
+      await this.conversationStore.save(record)
+
+      const nextMeta: TranscriptionMeta = {
+        sessionId,
+        durationMs: result.durationMs,
+        modelId: polished ? `${modelId} + AI` : modelId,
+        language: locale,
+      }
+
+      this.insertTextAtCursor(finalText)
+      this.stateMachine.setReady(finalText, nextMeta)
+      this.scheduleIdle()
+    } catch (error) {
+      if (audioPath) {
+        await this.conversationStore.save({
+          id: sessionId,
+          startedAt: Date.now(),
+          finishedAt: Date.now(),
+          durationMs: 0,
+          audioPath,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
+      this.handleError('Apple 听写失败', error, sessionId)
+    } finally {
+      this.scheduleTranscriberUnload()
+    }
+  }
+
+  private async ensureConversationFolder(sessionId: string): Promise<{ audioPath: string }> {
+    const dir = path.join(this.conversationsDir, sessionId)
+    await fsPromises.mkdir(dir, { recursive: true })
+    return { audioPath: path.join(dir, 'audio.wav') }
   }
 
   /**
@@ -531,12 +709,17 @@ export class AppController {
   private async stopRecording(message?: string, triggerType: TriggerType = 'hold'): Promise<void> {
     if (!this.activeRecording) return
 
-    const { handle, sessionId, timeout, recordingTimer } = this.activeRecording
+    const { handle, sessionId, timeout, recordingTimer, kind, appleRequireOnDevice, appleLocale, appleAudioPath } = this.activeRecording
     if (timeout) clearTimeout(timeout)
     if (recordingTimer) {
       metrics.endTimer(recordingTimer, 'recording', { sessionId })
     }
     this.activeRecording = null
+
+    if (kind === 'apple') {
+      await this.stopAppleDictation(handle as AppleDictationHandle, sessionId, appleRequireOnDevice ?? false, appleLocale, appleAudioPath, message, triggerType)
+      return
+    }
 
     const meta: TranscriptionMeta = { sessionId }
     this.stateMachine.setTranscribing(message, meta)
@@ -1044,7 +1227,11 @@ export class AppController {
     this.cancelIdleTimer()
     this.cancelTranscriberUnload()  // 清理缓存计时器
     if (this.activeRecording) {
-      this.activeRecording.handle.forceStop()
+      if (this.activeRecording.kind === 'native') {
+        this.activeRecording.handle.forceStop()
+      } else {
+        void this.activeRecording.handle.stop().catch(() => {})
+      }
       this.activeRecording = null
     }
     this.keyboardHookService?.destroy()
@@ -1052,6 +1239,7 @@ export class AppController {
     this.windowService?.destroy()
     this.ipcListeners.unregister()
     updateService.destroy()
+    this.appleDictationService.destroy()
     // 终止 transcriber worker 进程
     this.transcriber?.destroy?.()
     this.transcriber = null

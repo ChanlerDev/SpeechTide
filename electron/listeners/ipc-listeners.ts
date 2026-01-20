@@ -5,7 +5,7 @@
  */
 
 import { ipcMain } from 'electron'
-import type { ShortcutConfig, SpeechTideState } from '../../shared/app-state'
+import type { ShortcutConfig, SpeechTideState, AppleDictationStatus } from '../../shared/app-state'
 import type { ConversationRecord } from '../../shared/conversation'
 import { loadAppSettings } from '../config'
 import type { AppSettings } from '../config'
@@ -19,6 +19,7 @@ export interface IPCHandlers {
   setShortcutRecording: (recording: boolean) => void
   getSettings: () => ReturnType<typeof loadAppSettings>
   updateSettings: (settings: Partial<Omit<AppSettings, 'shortcut'>>) => Promise<{ success: boolean; error?: string }>
+  getAppleDictationStatus: () => Promise<AppleDictationStatus>
   checkAppleScriptPermission: () => Promise<{
     available: boolean
     hasPermission: boolean
@@ -100,6 +101,11 @@ export class IPCListeners {
       return this.handlers?.updateSettings(settings)
     })
 
+    // 获取 Apple 原生听写状态
+    ipcMain.handle('speech:get-apple-dictation-status', async () => {
+      return this.handlers?.getAppleDictationStatus()
+    })
+
     // 检查 AppleScript 权限
     ipcMain.handle('speech:check-applescript-permission', async () => {
       return this.handlers?.checkAppleScriptPermission()
@@ -162,6 +168,7 @@ export class IPCListeners {
     ipcMain.removeHandler('speech:update-shortcut')
     ipcMain.removeHandler('speech:get-settings')
     ipcMain.removeHandler('speech:update-settings')
+    ipcMain.removeHandler('speech:get-apple-dictation-status')
     ipcMain.removeHandler('speech:check-applescript-permission')
     ipcMain.removeHandler('speech:test-transcription')
     ipcMain.removeHandler('speech:play-test-audio')

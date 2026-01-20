@@ -61,7 +61,7 @@ export interface PolishConfig {
 /**
  * 转录模式
  */
-export type TranscriptionMode = 'offline' | 'online'
+export type TranscriptionMode = 'offline' | 'online' | 'apple'
 
 /**
  * 在线转录 Provider 类型
@@ -140,9 +140,22 @@ export interface OnlineTranscriptionConfig {
   timeoutMs?: number
 }
 
+export interface AppleDictationConfig {
+  requireOnDevice: boolean
+  locale?: string
+}
+
 export interface TranscriptionSettings {
   mode: TranscriptionMode
   online: OnlineTranscriptionConfig
+  apple?: AppleDictationConfig
+}
+
+export interface AppleDictationStatus {
+  available: boolean
+  supportsOnDevice: boolean
+  locale: string
+  reason?: string
 }
 
 // === File Transcription Types ===

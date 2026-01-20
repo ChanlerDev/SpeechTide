@@ -1,4 +1,4 @@
-import type { SpeechTideState, ShortcutConfig } from '../shared/app-state'
+import type { SpeechTideState, ShortcutConfig, AppleDictationStatus } from '../shared/app-state'
 import type { ConversationRecord } from '../shared/conversation'
 import type { AppSettings } from '../electron/config'
 
@@ -87,6 +87,7 @@ declare global {
       setShortcutRecording: (recording: boolean) => Promise<void>
       getSettings: () => Promise<AppSettings>
       updateSettings: (settings: Partial<Omit<AppSettings, 'shortcut'>>) => Promise<{ success: boolean; error?: string }>
+      getAppleDictationStatus: () => Promise<AppleDictationStatus>
       checkAppleScriptPermission: () => Promise<{ available: boolean; hasPermission: boolean; message: string; guide?: string }>
       playTestAudio: () => Promise<{ success: boolean; error?: string }>
       getHistoryStats: (options?: { maxAgeDays?: number }) => Promise<{ count: number; sizeBytes: number; error?: string }>

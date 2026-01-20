@@ -76,6 +76,10 @@ const speechAPI = {
   updateSettings(settings: Record<string, unknown>) {
     return ipcRenderer.invoke('speech:update-settings', settings)
   },
+  /** 获取 Apple 原生听写状态 */
+  getAppleDictationStatus() {
+    return ipcRenderer.invoke('speech:get-apple-dictation-status')
+  },
   /** 检查 AppleScript 权限 */
   checkAppleScriptPermission() {
     return ipcRenderer.invoke('speech:check-applescript-permission')
