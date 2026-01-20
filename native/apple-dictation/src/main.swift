@@ -37,14 +37,25 @@ final class DictationController: NSObject {
   }
 
   private func sendStatus(requestId: String) {
-    if SFSpeechRecognizer.authorizationStatus() != .authorized {
+    let status = SFSpeechRecognizer.authorizationStatus()
+    if status == .notDetermined {
+      SFSpeechRecognizer.requestAuthorization { [weak self] newStatus in
+        self?.sendStatusResponse(requestId: requestId, authStatus: newStatus)
+      }
+      return
+    }
+    sendStatusResponse(requestId: requestId, authStatus: status)
+  }
+
+  private func sendStatusResponse(requestId: String, authStatus: SFSpeechRecognizerAuthorizationStatus) {
+    if authStatus != .authorized {
       send([
         "type": "status",
         "requestId": requestId,
         "available": false,
         "supportsOnDevice": false,
         "locale": Locale.current.identifier,
-        "reason": "not authorized"
+        "reason": authStatus == .denied ? "denied" : "not authorized"
       ])
       return
     }
