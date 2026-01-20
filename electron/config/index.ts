@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
-import type { ShortcutConfig, PolishConfig, TranscriptionSettings, OnlineTranscriptionConfig } from '../../shared/app-state'
+import type { ShortcutConfig, PolishConfig, TranscriptionSettings, OnlineTranscriptionConfig, AppleDictationConfig } from '../../shared/app-state'
 import { DEFAULT_TAP_POLISH_ENABLED, DEFAULT_HOLD_POLISH_ENABLED } from '../../shared/app-state'
 import {
   getAppRoot,
@@ -202,9 +202,14 @@ const DEFAULT_ONLINE_TRANSCRIPTION_CONFIG: OnlineTranscriptionConfig = {
   timeoutMs: 120000,
 }
 
+const DEFAULT_APPLE_DICTATION_CONFIG: AppleDictationConfig = {
+  requireOnDevice: false,
+}
+
 const DEFAULT_TRANSCRIPTION_SETTINGS: TranscriptionSettings = {
   mode: 'offline',
   online: DEFAULT_ONLINE_TRANSCRIPTION_CONFIG,
+  apple: DEFAULT_APPLE_DICTATION_CONFIG,
 }
 
 export function loadAppSettings(): AppSettings {
@@ -233,6 +238,10 @@ export function loadAppSettings(): AppSettings {
       online: {
         ...DEFAULT_ONLINE_TRANSCRIPTION_CONFIG,
         ...raw.transcription?.online,
+      },
+      apple: {
+        ...DEFAULT_APPLE_DICTATION_CONFIG,
+        ...raw.transcription?.apple,
       },
     },
   }

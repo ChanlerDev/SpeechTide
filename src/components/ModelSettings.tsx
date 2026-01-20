@@ -4,7 +4,7 @@
  */
 
 import { memo, useCallback, useEffect, useState, useMemo } from 'react'
-import type { OnlineTranscriptionConfig, TranscriptionSettings, TranscriptionProvider } from '../../shared/app-state'
+import type { OnlineTranscriptionConfig, TranscriptionSettings, TranscriptionProvider, AppleDictationConfig, AppleDictationStatus } from '../../shared/app-state'
 import { TRANSCRIPTION_PROVIDERS } from '../../shared/app-state'
 
 interface ModelSettingsProps {
@@ -24,6 +24,9 @@ const DEFAULT_ONLINE_CONFIG: OnlineTranscriptionConfig = {
 const DEFAULT_SETTINGS: TranscriptionSettings = {
   mode: 'offline',
   online: DEFAULT_ONLINE_CONFIG,
+  apple: {
+    requireOnDevice: false,
+  },
 }
 
 const LANGUAGE_PRESETS = [
@@ -68,6 +71,8 @@ export const ModelSettings = ({ config, onConfigChange }: ModelSettingsProps) =>
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
   const [customModelInput, setCustomModelInput] = useState('')
   const [showCustomModel, setShowCustomModel] = useState(false)
+  const [appleStatus, setAppleStatus] = useState<AppleDictationStatus | null>(null)
+  const [appleStatusLoading, setAppleStatusLoading] = useState(false)
 
   const currentProvider = useMemo(() => {
     return TRANSCRIPTION_PROVIDERS.find(p => p.id === localConfig.online.provider) || TRANSCRIPTION_PROVIDERS[0]
@@ -80,7 +85,14 @@ export const ModelSettings = ({ config, onConfigChange }: ModelSettingsProps) =>
 
   useEffect(() => {
     if (config) {
-      setLocalConfig(config)
+      setLocalConfig({
+        ...DEFAULT_SETTINGS,
+        ...config,
+        apple: {
+          ...DEFAULT_SETTINGS.apple,
+          ...config.apple,
+        },
+      })
       const provider = TRANSCRIPTION_PROVIDERS.find(p => p.id === config.online.provider)
       if (config.online.modelId && provider && !provider.models.some(m => m.value === config.online.modelId)) {
         setCustomModelInput(config.online.modelId)
@@ -89,10 +101,23 @@ export const ModelSettings = ({ config, onConfigChange }: ModelSettingsProps) =>
     }
   }, [config])
 
+  useEffect(() => {
+    if (localConfig.mode === 'apple') {
+      refreshAppleStatus()
+    }
+  }, [localConfig.mode, refreshAppleStatus])
+
   const commitChange = useCallback(async (next: TranscriptionSettings, fallback?: TranscriptionSettings) => {
-    const normalized = next.mode === 'online'
+    const base = next.mode === 'online'
       ? { ...next, online: { ...next.online, responseFormat: 'json' as const } }
       : next
+    const normalized = {
+      ...base,
+      apple: {
+        ...DEFAULT_SETTINGS.apple,
+        ...base.apple,
+      },
+    }
     setLocalConfig(normalized)
     setSaving(true)
     const result = await onConfigChange(normalized)
@@ -102,12 +127,29 @@ export const ModelSettings = ({ config, onConfigChange }: ModelSettingsProps) =>
     }
   }, [onConfigChange])
 
-  const handleModeChange = useCallback(async (mode: 'offline' | 'online') => {
+  const handleModeChange = useCallback(async (mode: 'offline' | 'online' | 'apple') => {
     const previous = localConfig
     const next = { ...localConfig, mode }
     setTestResult(null)
     await commitChange(next, previous)
   }, [localConfig, commitChange])
+
+  const refreshAppleStatus = useCallback(async () => {
+    setAppleStatusLoading(true)
+    try {
+      const status = await window.speech.getAppleDictationStatus()
+      setAppleStatus(status)
+    } catch {
+      setAppleStatus({
+        available: false,
+        supportsOnDevice: false,
+        locale: '',
+        reason: '获取状态失败',
+      })
+    } finally {
+      setAppleStatusLoading(false)
+    }
+  }, [])
 
   const updateOnlineField = useCallback((patch: Partial<OnlineTranscriptionConfig>) => {
     setLocalConfig(prev => ({
@@ -163,6 +205,18 @@ export const ModelSettings = ({ config, onConfigChange }: ModelSettingsProps) =>
 
   const handleLanguageChange = useCallback(async (lang: string) => {
     const next = { ...localConfig, online: { ...localConfig.online, language: lang || undefined } }
+    await commitChange(next)
+  }, [localConfig, commitChange])
+
+  const handleAppleConfigChange = useCallback(async (patch: Partial<AppleDictationConfig>) => {
+    const next = {
+      ...localConfig,
+      apple: {
+        requireOnDevice: false,
+        ...localConfig.apple,
+        ...patch,
+      },
+    }
     await commitChange(next)
   }, [localConfig, commitChange])
 
@@ -228,6 +282,17 @@ export const ModelSettings = ({ config, onConfigChange }: ModelSettingsProps) =>
               } ${saving ? 'opacity-50' : ''}`}
             >
               在线（云端 API）
+            </button>
+            <button
+              onClick={() => handleModeChange('apple')}
+              disabled={saving}
+              className={`flex-1 px-2 py-1.5 text-xs rounded-lg border transition-all ${
+                localConfig.mode === 'apple'
+                  ? 'bg-orange-50 border-orange-300 text-orange-700 font-medium'
+                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300'
+              } ${saving ? 'opacity-50' : ''}`}
+            >
+              Apple 原生听写
             </button>
           </div>
         </div>
@@ -518,6 +583,50 @@ export const ModelSettings = ({ config, onConfigChange }: ModelSettingsProps) =>
                   </div>
                 )
               })}
+            </div>
+          </div>
+        )}
+
+        {localConfig.mode === 'apple' && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-2.5 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+              <span className="text-blue-600 text-xs">ℹ️</span>
+              <span className="text-[11px] text-blue-700">使用系统听写引擎，默认允许联网</span>
+            </div>
+
+            <div className="px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-600">仅本地模式</span>
+                <button
+                  type="button"
+                  onClick={() => handleAppleConfigChange({ requireOnDevice: !(localConfig.apple?.requireOnDevice ?? false) })}
+                  disabled={saving || appleStatusLoading || !appleStatus?.supportsOnDevice}
+                  className={`px-2.5 py-1 text-xs rounded-full border transition-all ${
+                    localConfig.apple?.requireOnDevice
+                      ? 'bg-orange-50 border-orange-300 text-orange-700 font-medium'
+                      : 'bg-gray-100 border-gray-200 text-gray-600'
+                  } ${saving || appleStatusLoading || !appleStatus?.supportsOnDevice ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {localConfig.apple?.requireOnDevice ? '已开启' : '已关闭'}
+                </button>
+              </div>
+              <div className="text-[11px] text-gray-500">
+                {appleStatusLoading && '检测中…'}
+                {!appleStatusLoading && appleStatus?.available === false && (appleStatus.reason || '当前环境不可用')}
+                {!appleStatusLoading && appleStatus?.available && appleStatus.supportsOnDevice && '设备支持本地识别'}
+                {!appleStatusLoading && appleStatus?.available && !appleStatus.supportsOnDevice && '当前语言/设备不支持本地识别，仅可联网'}
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-gray-400">可用状态</span>
+                <button
+                  type="button"
+                  onClick={refreshAppleStatus}
+                  disabled={appleStatusLoading}
+                  className={`text-[11px] text-gray-500 hover:text-gray-700 ${appleStatusLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  刷新
+                </button>
+              </div>
             </div>
           </div>
         )}

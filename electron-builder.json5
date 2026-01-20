@@ -40,6 +40,11 @@
       "from": "native/ax-insert/build/Release",
       "to": "native",
       "filter": ["*.node"]
+    },
+    {
+      "from": "native/apple-dictation/bin",
+      "to": "native",
+      "filter": ["apple-dictation-helper"]
     }
   ],
   
@@ -57,6 +62,7 @@
     "entitlementsInherit": "build/entitlements.mac.plist",
     "extendInfo": {
       "NSMicrophoneUsageDescription": "SpeechTide 需要访问麦克风进行语音录制",
+      "NSSpeechRecognitionUsageDescription": "SpeechTide 需要使用系统语音识别进行听写",
       "NSAppleEventsUsageDescription": "SpeechTide 需要控制其他应用以插入转写文本"
     }
   },
