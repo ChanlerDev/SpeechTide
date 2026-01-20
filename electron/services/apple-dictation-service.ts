@@ -122,7 +122,15 @@ export class AppleDictationService {
       }
     })
 
-    await this.sendRequest('start', options)
+    try {
+      await this.sendRequest('start', options)
+    } catch (error) {
+      if (this.activeSession?.sessionId === options.sessionId) {
+        this.activeSession.rejectFinal(error instanceof Error ? error : new Error(String(error)))
+        this.activeSession = null
+      }
+      throw error
+    }
 
     return {
       stop: async () => {

@@ -517,7 +517,18 @@ export class AppController {
       }
       const mode = this.settings.transcription?.mode ?? 'offline'
       if (mode === 'apple') {
-        await this.startAppleDictation(sessionId, recordingTimer)
+        this.activeRecording = {
+          sessionId,
+          handle: null as unknown as AppleDictationHandle,
+          timeout: undefined,
+          recordingTimer,
+          kind: 'apple',
+        }
+        try {
+          await this.startAppleDictation(sessionId)
+        } catch {
+          this.activeRecording = null
+        }
         return
       }
 
@@ -535,7 +546,7 @@ export class AppController {
     }
   }
 
-  private async startAppleDictation(sessionId: string, recordingTimer?: string): Promise<void> {
+  private async startAppleDictation(sessionId: string): Promise<void> {
     if (!isMac) {
       this.handleError('Apple 听写仅支持 macOS', new Error('平台不支持'), sessionId)
       return
@@ -575,15 +586,11 @@ export class AppController {
       )
 
       this.cancelIdleTimer()
-      this.activeRecording = {
-        sessionId,
-        handle,
-        timeout: undefined,
-        recordingTimer,
-        kind: 'apple',
-        appleRequireOnDevice: requireOnDevice,
-        appleLocale: locale,
-        appleAudioPath: audioPath,
+      if (this.activeRecording?.sessionId === sessionId) {
+        this.activeRecording.handle = handle
+        this.activeRecording.appleRequireOnDevice = requireOnDevice
+        this.activeRecording.appleLocale = locale
+        this.activeRecording.appleAudioPath = audioPath
       }
       const meta: TranscriptionMeta = { sessionId }
       this.stateMachine.setRecording(meta)

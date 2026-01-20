@@ -101,6 +101,23 @@ export const ModelSettings = ({ config, onConfigChange }: ModelSettingsProps) =>
     }
   }, [config])
 
+  const refreshAppleStatus = useCallback(async () => {
+    setAppleStatusLoading(true)
+    try {
+      const status = await window.speech.getAppleDictationStatus()
+      setAppleStatus(status)
+    } catch {
+      setAppleStatus({
+        available: false,
+        supportsOnDevice: false,
+        locale: '',
+        reason: '获取状态失败',
+      })
+    } finally {
+      setAppleStatusLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     if (localConfig.mode === 'apple') {
       refreshAppleStatus()
@@ -133,23 +150,6 @@ export const ModelSettings = ({ config, onConfigChange }: ModelSettingsProps) =>
     setTestResult(null)
     await commitChange(next, previous)
   }, [localConfig, commitChange])
-
-  const refreshAppleStatus = useCallback(async () => {
-    setAppleStatusLoading(true)
-    try {
-      const status = await window.speech.getAppleDictationStatus()
-      setAppleStatus(status)
-    } catch {
-      setAppleStatus({
-        available: false,
-        supportsOnDevice: false,
-        locale: '',
-        reason: '获取状态失败',
-      })
-    } finally {
-      setAppleStatusLoading(false)
-    }
-  }, [])
 
   const updateOnlineField = useCallback((patch: Partial<OnlineTranscriptionConfig>) => {
     setLocalConfig(prev => ({
