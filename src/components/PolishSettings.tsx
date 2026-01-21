@@ -16,7 +16,19 @@ const PROVIDER_OPTIONS = [
   { value: 'deepseek', label: 'DeepSeek', defaultModel: 'deepseek-chat', defaultBaseUrl: 'https://api.deepseek.com/v1' },
 ] as const
 
-const DEFAULT_PROMPT = ''
+const DEFAULT_PROMPT = `你是一个语音转写文本纠正助手。
+
+你的任务：
+- 修正语音识别文本中的识别错误、同音字错误、错别字和标点问题
+- 保持原意，不增删信息
+- 当识别结果中出现与用户词典中词汇发音相似、拼写接近或语义相关的词时，将其替换为词典中的标准形式
+- 不要更改词典中词汇的拼写、大小写或符号
+
+输出：
+调用一次名为 return_correction 的函数，参数：
+status: "ok" 或 "filtered"
+text: 纠正后的文本或原文
+reason: 可选（若触发内容安全限制，说明原因）`
 
 export const PolishSettings = ({ config, onConfigChange }: PolishSettingsProps) => {
   const [localConfig, setLocalConfig] = useState<PolishConfig>(() => config || {
@@ -33,7 +45,10 @@ export const PolishSettings = ({ config, onConfigChange }: PolishSettingsProps) 
   // 同步外部配置变化
   useEffect(() => {
     if (config) {
-      setLocalConfig(config)
+      setLocalConfig({
+        ...config,
+        systemPrompt: config.systemPrompt || DEFAULT_PROMPT,
+      })
     }
   }, [config])
 
@@ -238,8 +253,7 @@ export const PolishSettings = ({ config, onConfigChange }: PolishSettingsProps) 
                     value={localConfig.systemPrompt}
                     onChange={handlePromptChange}
                     onBlur={handlePromptBlur}
-                    rows={4}
-                    placeholder="留空使用内置默认提示词（语音转写纠正助手）"
+                    rows={8}
                     className="w-full mt-1.5 px-3 py-2 text-xs border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:border-orange-300 focus:ring-1 focus:ring-orange-100 resize-none"
                   />
                 </div>
