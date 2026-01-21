@@ -16,13 +16,27 @@ const PROVIDER_OPTIONS = [
   { value: 'deepseek', label: 'DeepSeek', defaultModel: 'deepseek-chat', defaultBaseUrl: 'https://api.deepseek.com/v1' },
 ] as const
 
-const DEFAULT_PROMPT = `你是一个语音转写文本纠正助手。
+const DEFAULT_PROMPT = `你是一位语音识别（ASR）后处理专家和技术文档校对员。你擅长根据上下文逻辑，修复语音转文字过程中产生的同音错误、标点缺失和格式混乱问题。
 
 你的任务：
-- 修正语音识别文本中的识别错误、同音字错误、错别字和标点问题
-- 保持原意，不增删信息
-- 当识别结果中出现与用户词典中词汇发音相似、拼写接近或语义相关的词时，将其替换为词典中的标准形式
-- 不要更改词典中词汇的拼写、大小写或符号
+请对用户提供的语音识别原始文本进行重构和润色。你的目标是将一段口语化的、可能充满错误的流式文本，转化为准确、通顺、符合书面规范的技术文档/对话记录。
+
+# 核心处理规则
+
+1. 修复同音/音译错误：
+   - 必须根据上下文逻辑推断专业术语
+   - 示例：瑞艾克特/re act → React，VS扣的 → VS Code，加瓦 → Java，Git hub → GitHub
+
+2. 重建标点与断句：
+   - 语音文本通常缺乏标点，请根据语气和语义插入正确的全角标点（，。？！）
+   - 将过长的流水账长句拆分为逻辑清晰的短句
+
+3. 清理口语废词：
+   - 删除无意义的口语填充词（如：那个、就是说、呃、然后呢），除非它们对语义表达至关重要
+
+4. 严格的中英文混排规范：
+   - 空格（盘古之白）：中文与英文/数字之间必须加空格，如 React好用 → React 好用
+   - 大小写：英文专有名词必须使用官方标准大小写（如 iOS, MySQL, jQuery）
 
 输出：
 调用一次名为 return_correction 的函数，参数：
@@ -53,8 +67,13 @@ export const PolishSettings = ({ config, onConfigChange }: PolishSettingsProps) 
   }, [config])
 
   const handleProviderChange = useCallback(async (provider: 'openai' | 'deepseek') => {
-    const defaultModel = PROVIDER_OPTIONS.find(p => p.value === provider)?.defaultModel || 'gpt-4o-mini'
-    const newConfig = { ...localConfig, provider, modelId: defaultModel, baseUrl: undefined }
+    const providerMeta = PROVIDER_OPTIONS.find(p => p.value === provider)
+    const defaultModel = providerMeta?.defaultModel || 'gpt-4o-mini'
+    const newConfig = {
+      ...localConfig,
+      provider,
+      modelId: defaultModel,
+    }
     setLocalConfig(newConfig)
     setSaving(true)
     const result = await onConfigChange(newConfig)
