@@ -179,7 +179,7 @@ export const PolishSettings = ({ config, onConfigChange }: PolishSettingsProps) 
                 value={localConfig.apiKey}
                 onChange={handleApiKeyChange}
                 onBlur={handleApiKeyBlur}
-                placeholder={localConfig.provider === 'openai' ? 'sk-...' : 'sk-...'}
+                placeholder={localConfig.provider === 'deepseek' ? 'sk-...' : 'sk-proj-...'}
                 className="w-full px-3 py-2 pr-16 text-xs border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:border-orange-300 focus:ring-1 focus:ring-orange-100"
               />
               <button
@@ -200,7 +200,7 @@ export const PolishSettings = ({ config, onConfigChange }: PolishSettingsProps) 
               value={localConfig.modelId}
               onChange={handleModelChange}
               onBlur={handleModelBlur}
-              placeholder="gpt-4o-mini"
+              placeholder={localConfig.provider === 'deepseek' ? 'deepseek-chat' : 'gpt-4o-mini'}
               className="w-full mt-1.5 px-3 py-2 text-xs border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:border-orange-300 focus:ring-1 focus:ring-orange-100"
             />
           </div>
